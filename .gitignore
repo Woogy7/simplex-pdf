@@ -26,6 +26,7 @@ Thumbs.db
 
 # Tauri
 src-tauri/gen/
+src-tauri/lib/
 
 # Claude Code
 .claude/

@@ -16,6 +16,10 @@ pub enum AppError {
     #[error("PDF error: {0}")]
     Pdf(String),
 
+    /// An error from the `PDFium` rendering library.
+    #[error("PDFium error: {0}")]
+    Pdfium(#[from] pdfium_render::prelude::PdfiumError),
+
     /// A filesystem or other I/O error.
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
@@ -23,6 +27,23 @@ pub enum AppError {
     /// A serialization or deserialization error.
     #[error("Serialization error: {0}")]
     Serialization(#[from] serde_json::Error),
+
+    /// No document is currently open.
+    #[error("No document open")]
+    NoDocument,
+
+    /// The requested page index is out of bounds.
+    #[error("Page index {index} out of bounds (document has {count} pages)")]
+    PageOutOfBounds {
+        /// The requested page index.
+        index: i32,
+        /// The total number of pages.
+        count: i32,
+    },
+
+    /// An image encoding/decoding error.
+    #[error("Image error: {0}")]
+    Image(#[from] image::ImageError),
 
     /// A catch-all for errors that don't fit other variants.
     #[error("{0}")]

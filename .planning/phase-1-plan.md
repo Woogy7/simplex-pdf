@@ -37,8 +37,12 @@ Ship a usable, fast PDF viewer with search and basic annotation support.
 - Performance testing with large PDFs
 - First alpha release
 
-## Key Decisions Needed
-- [ ] PDFium vs MuPDF — benchmark both with real PDFs
+## Key Decisions
+- [x] PDFium vs MuPDF — **PDFium chosen** (2026-04-06)
+  - pdfium-render (v0.9.0) is the only crate covering all requirements: rendering, text extraction, forms, annotations, page manipulation
+  - MuPDF eliminated: AGPL license, no form field support, Windows broken, soundness bugs
+  - PDFium shipped as dynamic library (~3-6MB) bundled with app via Tauri resources
+  - lopdf added as complement for structural PDF manipulation (merge, raw object access)
 - [ ] Frontend state management — React Context vs Zustand
 - [ ] Annotation storage format
 

@@ -1,18 +1,21 @@
 :root {
   --bg-primary: #ffffff;
   --bg-secondary: #f5f5f5;
+  --bg-toolbar: #fafafa;
   --text-primary: #1a1a1a;
   --text-secondary: #666666;
   --accent: #3b82f6;
   --accent-hover: #2563eb;
   --border: #e5e5e5;
   --radius: 6px;
+  --toolbar-height: 48px;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
     --bg-primary: #1a1a1a;
     --bg-secondary: #2a2a2a;
+    --bg-toolbar: #222222;
     --text-primary: #f0f0f0;
     --text-secondary: #999999;
     --accent: #60a5fa;
@@ -33,57 +36,195 @@ body {
   background-color: var(--bg-primary);
   color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
+  overflow: hidden;
 }
 
-.app {
+/* --- Layout --- */
+
+.app-layout {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.main-content {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+}
+
+/* --- Toolbar --- */
+
+.toolbar {
+  height: var(--toolbar-height);
+  background: var(--bg-toolbar);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px;
+  gap: 12px;
+  user-select: none;
+}
+
+.toolbar-left,
+.toolbar-center,
+.toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.toolbar-left {
+  min-width: 0;
+  flex: 1;
+}
+
+.toolbar-right {
+  flex: 1;
+  justify-content: flex-end;
+}
+
+.toolbar-title {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.toolbar-btn {
+  padding: 4px 12px;
+  background: transparent;
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.toolbar-btn:hover:not(:disabled) {
+  background: var(--bg-secondary);
+}
+
+.toolbar-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.page-indicator {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.page-input {
+  width: 48px;
+  padding: 2px 6px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  text-align: center;
+  -moz-appearance: textfield;
+}
+
+.page-input::-webkit-outer-spin-button,
+.page-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* --- Viewer --- */
+
+.viewer {
+  flex: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  overflow: auto;
+  background: var(--bg-secondary);
+  padding: 24px;
+}
+
+.viewer-page {
+  max-width: 100%;
+  height: auto;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+  background: white;
+}
+
+.viewer-loading,
+.viewer-error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  width: 100%;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.viewer-error {
+  color: #ef4444;
+}
+
+/* --- Empty state --- */
+
+.empty-state {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 100vh;
-  padding: 2rem;
-  gap: 1rem;
+  height: 100%;
+  width: 100%;
+  gap: 12px;
 }
 
-h1 {
+.empty-state h1 {
   font-size: 2rem;
   font-weight: 700;
 }
 
-p {
+.empty-state p {
   color: var(--text-secondary);
 }
 
-form {
-  display: flex;
-  gap: 0.5rem;
-}
+/* --- Buttons --- */
 
-input {
-  padding: 0.5rem 1rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--bg-secondary);
-  color: var(--text-primary);
-  font-size: 1rem;
-  outline: none;
-}
-
-input:focus {
-  border-color: var(--accent);
-}
-
-button {
-  padding: 0.5rem 1.5rem;
+.btn-primary {
+  padding: 8px 24px;
   background: var(--accent);
   color: white;
   border: none;
   border-radius: var(--radius);
   font-size: 1rem;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: background-color 0.15s;
 }
 
-button:hover {
+.btn-primary:hover {
   background: var(--accent-hover);
+}
+
+/* --- Error banner --- */
+
+.error-banner {
+  padding: 8px 16px;
+  background: #fef2f2;
+  color: #dc2626;
+  border-bottom: 1px solid #fecaca;
+  font-size: 0.85rem;
+  width: 100%;
+}
+
+@media (prefers-color-scheme: dark) {
+  .error-banner {
+    background: #2d1b1b;
+    border-color: #5c2020;
+  }
 }

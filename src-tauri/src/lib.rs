@@ -6,9 +6,13 @@
 #![warn(clippy::all, clippy::pedantic)]
 
 mod commands;
-mod pdf;
+pub mod pdf;
 mod storage;
-mod utils;
+pub mod utils;
+
+use std::sync::Mutex;
+
+use commands::file::OpenDocument;
 
 /// Builds and runs the Tauri application.
 ///
@@ -20,7 +24,15 @@ mod utils;
 /// Panics if the Tauri application fails to initialize or run.
 pub fn run() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![commands::file::greet])
+        .plugin(tauri_plugin_dialog::init())
+        .manage(OpenDocument(Mutex::new(None)))
+        .invoke_handler(tauri::generate_handler![
+            commands::file::open_file,
+            commands::file::get_page_count,
+            commands::file::get_document_info,
+            commands::file::render_page,
+            commands::file::get_page_dimensions,
+        ])
         .run(tauri::generate_context!())
         .expect("failed to run simplex-pdf application");
 }
