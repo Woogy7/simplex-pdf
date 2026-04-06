@@ -1,0 +1,22 @@
+[package]
+name = "simplex-pdf"
+version = "0.1.0"
+description = "A modern PDF viewer and editor"
+authors = ["Simplex PDF Contributors"]
+license = "MIT OR Apache-2.0"
+edition = "2021"
+
+[lib]
+name = "simplex_pdf_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["tray-icon"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+anyhow = "1"
+tokio = { version = "1", features = ["full"] }
