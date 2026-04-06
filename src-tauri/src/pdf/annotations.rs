@@ -254,15 +254,16 @@ pub fn read_all_annotations(document: &Document) -> Result<Vec<ExistingAnnotatio
                 bounds.top().value
             );
 
-            eprintln!("[read_ann]     Getting color...");
-            let color = annotation
-                .stroke_color()
-                .or_else(|_| annotation.fill_color())
-                .map_or_else(
-                    |_| "#FFD500".to_string(),
-                    |c| format!("#{:02X}{:02X}{:02X}", c.red(), c.green(), c.blue()),
-                );
-            eprintln!("[read_ann]     Color: {color}");
+            // NOTE: Reading annotation colors via FPDFAnnot_GetColor segfaults
+            // on some annotations (confirmed crash on highlight annotations from
+            // PDFs saved by this app). Use default colors per type instead.
+            let color = match type_name {
+                "underline" => "#000000",
+                "strikeout" => "#FF0000",
+                _ => "#FFD500",
+            }
+            .to_string();
+            eprintln!("[read_ann]     Color: {color} (default)");
 
             eprintln!("[read_ann]     Getting contents...");
             let content = annotation.contents();
