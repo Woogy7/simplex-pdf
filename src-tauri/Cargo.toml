@@ -10,6 +10,12 @@ edition = "2021"
 name = "simplex_pdf_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
+# Optimize all dependencies even in dev mode.
+# This makes PNG encoding, image processing, and PDFium calls fast
+# while keeping our own code unoptimized for quick recompilation.
+[profile.dev.package."*"]
+opt-level = 2
+
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 

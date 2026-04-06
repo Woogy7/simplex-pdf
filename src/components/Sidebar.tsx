@@ -27,7 +27,7 @@ export default function Sidebar({
       if (thumbnails.has(i)) continue;
 
       // Low DPI for thumbnails
-      renderPage(i, 0.3)
+      renderPage(i, 0.2)
         .then((uri) => {
           setThumbnails((prev) => {
             const next = new Map(prev);

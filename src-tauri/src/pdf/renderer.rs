@@ -10,7 +10,9 @@ use crate::utils::error::AppError;
 use super::parser::{Document, PageIndex};
 
 /// Default rendering DPI used when no scale factor is specified.
-const DEFAULT_DPI: f32 = 150.0;
+/// 96 DPI matches standard screen resolution. The frontend scale
+/// parameter multiplies this (e.g. 1.5 = 144 DPI for crisp text).
+const DEFAULT_DPI: f32 = 96.0;
 
 /// Renders a single page of a document to PNG bytes.
 ///
@@ -47,13 +49,13 @@ pub fn render_page(
     let bitmap = page.render_with_config(&config)?;
     let image = bitmap.as_image()?;
 
-    let mut png_bytes = Vec::new();
+    let mut jpeg_bytes = Vec::new();
     image.write_to(
-        &mut std::io::Cursor::new(&mut png_bytes),
-        image::ImageFormat::Png,
+        &mut std::io::Cursor::new(&mut jpeg_bytes),
+        image::ImageFormat::Jpeg,
     )?;
 
-    Ok(png_bytes)
+    Ok(jpeg_bytes)
 }
 
 /// Information about a single page's dimensions.
@@ -98,5 +100,5 @@ fn pixels_from_points(points: f32, dpi: f32) -> Pixels {
 pub fn to_base64_data_uri(png_bytes: &[u8]) -> String {
     use base64::Engine;
     let encoded = base64::engine::general_purpose::STANDARD.encode(png_bytes);
-    format!("data:image/png;base64,{encoded}")
+    format!("data:image/jpeg;base64,{encoded}")
 }

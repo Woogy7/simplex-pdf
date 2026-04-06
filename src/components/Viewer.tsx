@@ -24,7 +24,6 @@ interface ViewerProps {
 const PAGE_GAP = 16;
 const BUFFER_PAGES = 1;
 
-/** Parses a hex color string to an AnnotationColor. */
 function hexToColor(hex: string): AnnotationColor {
   const h = hex.replace("#", "");
   return {
@@ -62,12 +61,16 @@ export default function Viewer({
   const [renderVersion, setRenderVersion] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const pageRefs = useRef<Map<number, HTMLDivElement>>(new Map());
+  // Tracks whether we're programmatically scrolling (suppresses scroll-based page tracking)
   const scrollingToRef = useRef(false);
+  // Tracks in-flight render requests to avoid duplicate fetches
+  const renderingRef = useRef<Set<string>>(new Set());
 
   // Reset state when document changes
   useEffect(() => {
     setRenderedPages(new Map());
     setVisiblePages(new Set([0]));
+    renderingRef.current.clear();
   }, [pageCount]);
 
   // Set up intersection observer
@@ -103,7 +106,7 @@ export default function Viewer({
     return () => observer.disconnect();
   }, [dimensions]);
 
-  // Update current page from scroll
+  // Update current page from scroll position (only when user is scrolling, not programmatic)
   useEffect(() => {
     if (visiblePages.size === 0 || scrollingToRef.current) return;
     const sorted = Array.from(visiblePages).sort((a, b) => a - b);
@@ -111,9 +114,10 @@ export default function Viewer({
     if (topVisible !== undefined && topVisible !== currentPage) {
       onPageChange(topVisible);
     }
-  }, [visiblePages, currentPage, onPageChange]);
+  }, [visiblePages]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Intentionally only depends on visiblePages — including currentPage/onPageChange causes loops
 
-  // Scroll to page on external navigation
+  // Scroll to page on external navigation (toolbar arrows, thumbnail click, etc.)
   useEffect(() => {
     const el = pageRefs.current.get(currentPage);
     if (!el || !containerRef.current) return;
@@ -128,13 +132,16 @@ export default function Viewer({
     if (!visible) {
       scrollingToRef.current = true;
       el.scrollIntoView({ behavior: "auto", block: "start" });
+      // Give the browser time to scroll and the IntersectionObserver time to fire + settle
       setTimeout(() => {
         scrollingToRef.current = false;
-      }, 100);
+      }, 300);
     }
   }, [currentPage]);
 
   // Render visible pages + buffer
+  // NOTE: renderedPages is NOT in the dependency array to avoid render cascades.
+  // We use renderingRef to track in-flight requests instead.
   useEffect(() => {
     if (dimensions.length === 0) return;
 
@@ -149,13 +156,14 @@ export default function Viewer({
       }
     }
 
-    const scale = zoom * 1.5;
+    const scale = zoom;
     const version = renderVersion;
     for (const pageIndex of toRender) {
-      if (renderedPages.has(pageIndex)) {
-        const cached = renderedPages.get(pageIndex)!;
-        if (cached.startsWith(`v${version}:scale:${scale}:`)) continue;
-      }
+      const cacheKey = `v${version}:${scale}:${pageIndex}`;
+
+      // Skip if already rendered or currently rendering
+      if (renderingRef.current.has(cacheKey)) continue;
+      renderingRef.current.add(cacheKey);
 
       renderPage(pageIndex, scale)
         .then((uri) => {
@@ -167,7 +175,7 @@ export default function Viewer({
         })
         .catch(console.error);
     }
-  }, [visiblePages, dimensions, zoom, pageCount, renderedPages, renderVersion]);
+  }, [visiblePages, dimensions, zoom, pageCount, renderVersion]);
 
   const setPageRef = useCallback(
     (index: number) => (el: HTMLDivElement | null) => {
@@ -183,12 +191,10 @@ export default function Viewer({
   const getImageUri = (pageIndex: number): string | null => {
     const entry = renderedPages.get(pageIndex);
     if (!entry) return null;
-    // Strip all prefixes: v{N}:scale:{S}:{uri}
     const dataIdx = entry.indexOf("data:");
     return dataIdx >= 0 ? entry.substring(dataIdx) : null;
   };
 
-  // Convert mouse position to PDF coordinates
   const mouseToPdf = (
     e: React.MouseEvent,
     pageIndex: number,
@@ -198,9 +204,8 @@ export default function Viewer({
     const dim = dimensions[pageIndex];
     const cssX = e.clientX - rect.left;
     const cssY = e.clientY - rect.top;
-    // Convert from display coords to PDF points
-    const pdfX = (cssX / zoom) * 1; // dim.width is in points, display = dim.width * zoom
-    const pdfY = dim.height - cssY / zoom; // PDF y is bottom-up
+    const pdfX = cssX / zoom;
+    const pdfY = dim.height - cssY / zoom;
     return { x: pdfX, y: pdfY };
   };
 
@@ -244,7 +249,6 @@ export default function Viewer({
       top: Math.max(drag.startY, drag.currentY),
     };
 
-    // Require minimum size for drag annotations
     const width = rect.right - rect.left;
     const height = rect.top - rect.bottom;
 
@@ -254,11 +258,16 @@ export default function Viewer({
         if (content) {
           await addNote(
             drag.pageIndex,
-            { left: drag.startX, top: drag.startY + 24, right: drag.startX + 24, bottom: drag.startY },
+            {
+              left: drag.startX,
+              top: drag.startY + 24,
+              right: drag.startX + 24,
+              bottom: drag.startY,
+            },
             content,
             { ...color, a: 255 },
           );
-          // Force re-render of affected page
+          renderingRef.current.clear();
           setRenderedPages((prev) => {
             const next = new Map(prev);
             next.delete(drag.pageIndex);
@@ -268,6 +277,7 @@ export default function Viewer({
         }
       } else if (width > 2 && height > 2) {
         await addMarkup(drag.pageIndex, annotationMode, rect, color);
+        renderingRef.current.clear();
         setRenderedPages((prev) => {
           const next = new Map(prev);
           next.delete(drag.pageIndex);
@@ -282,7 +292,6 @@ export default function Viewer({
     setDrag(null);
   };
 
-  // Render drag preview overlay
   const getDragOverlay = (pageIndex: number, pageDim: PageDimensions) => {
     if (!drag || drag.pageIndex !== pageIndex) return null;
 
@@ -306,7 +315,6 @@ export default function Viewer({
     );
   };
 
-  // Search match overlays
   const getMatchOverlays = (pageIndex: number, pageDim: PageDimensions) => {
     if (!searchResults) return null;
 
