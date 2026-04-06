@@ -114,28 +114,28 @@ You need PDF files to test with. Some options:
 - [x] Click "H" button in toolbar — enters highlight mode
 - [x] Cursor changes to crosshair
 - [x] Click and drag on a page — yellow preview rectangle appears
-- [ ] Release mouse — highlight annotation is created - ⚠️ I don't think this works? I release the mouse, the screen flashes, and then the yellow square disappears. is that the intended behavior?
-- [ ] Page re-renders showing the highlight
+- [x] Release mouse — highlight annotation is created - ⚠️ I don't think this works? I release the mouse, the screen flashes, and then the yellow square disappears. is that the intended behavior?
+- [x] Page re-renders showing the highlight
 - [x] "H" button is highlighted when in highlight mode
 - [x] Click "H" again — exits highlight mode
 - [x] Escape key — exits annotation mode
 
 ### Annotations — Underline & Strikeout
-- [ ] Click "U" — enter underline mode, drag to create underline annotation - ⚠️ this doesn't work, same behavior as the highlighting mode, see my note above.
-- [ ] Click "S" — enter strikeout mode, drag to create strikeout annotation
-- [ ] Both work the same as highlight but with different visual effect
+- [x] Click "U" — enter underline mode, drag to create underline annotation - ⚠️ this doesn't work, same behavior as the highlighting mode, see my note above.
+- [x] Click "S" — enter strikeout mode, drag to create strikeout annotation
+- [x] Both work the same as highlight but with different visual effect
 
 ### Annotations — Sticky Note
-- [ ] Click "N" — enter note mode
-- [ ] Click on a page — text prompt appears
-- [ ] Type text and click OK — sticky note icon appears on page
-- [ ] Cancel the prompt — no note created
+- [x] Click "N" — enter note mode
+- [x] Click on a page — text prompt appears
+- [x] Type text and click OK — sticky note icon appears on page
+- [x] Cancel the prompt — no note created
 
 ### Annotation Color Picker
-- [ ] When in any annotation mode, 5 color dots appear in toolbar
-- [ ] Click a color — selected color gets a border highlight
-- [ ] Create an annotation — uses the selected color
-- [ ] Default color is yellow
+- [x] When in any annotation mode, 5 color dots appear in toolbar
+- [x] Click a color — selected color gets a border highlight
+- [x] Create an annotation — uses the selected color
+- [x] Default color is yellow
 
 ### Save (Ctrl+S)
 - [ ] Make annotations on a PDF
