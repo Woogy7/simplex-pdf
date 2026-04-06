@@ -55,7 +55,17 @@
 
 6. **Smart Field Library (Key Differentiator)**
    - Users can save frequently used values (company name, address, registration number, VAT number, contact details, etc.)
+   - Every field entry has a **label** for disambiguation — critical when the same type of value exists across multiple entities (e.g., "Company A VAT Number", "Company B VAT Number", "Company C VAT Number")
    - Categorised field library (Personal, Company, Legal, Custom)
+   - **Fuzzy search dropdown when filling fields:**
+     - Works identically for both flat PDFs and interactive form PDFs
+     - User selects the text tool, clicks where they want to type, and begins typing
+     - After 2+ characters, a fuzzy search dropdown appears
+     - Fuzzy matching runs against **both** the field label and the field value simultaneously
+     - Example: typing "VAT" matches all entries whose label contains "VAT" (e.g., "Company A VAT Number", "Company B VAT Number"); typing "401" matches entries whose value contains "401"
+     - Dropdown entries display the **label** prominently alongside a preview of the **value**, so the user can distinguish between similarly-typed fields at a glance
+     - Selecting an entry from the dropdown inserts the value into the field
+     - User can dismiss the dropdown and continue typing freely (no forced selection)
    - Auto-suggest from library when filling forms
    - Remember previously used form field mappings per PDF template
    - "Fill from profile" — one-click populate matching fields
@@ -263,10 +273,14 @@ The Smart Field Library should use a local SQLite database (via `rusqlite`) or J
     {
       "name": "Company",
       "fields": [
-        { "label": "Company Name", "value": "Fastell Industrial Supplies (Pty) Ltd", "tags": ["company", "name"] },
-        { "label": "Registration Number", "value": "2012/224564/07", "tags": ["company", "reg"] },
-        { "label": "Company Address", "value": "Sebenza, Edenvale, Johannesburg", "tags": ["address"] },
-        { "label": "VAT Number", "value": "...", "tags": ["vat", "tax"] }
+        { "label": "Fastell Company Name", "value": "Fastell Industrial Supplies (Pty) Ltd", "tags": ["company", "name"] },
+        { "label": "Fastell Registration Number", "value": "2012/224564/07", "tags": ["company", "reg"] },
+        { "label": "Fastell Address", "value": "Sebenza, Edenvale, Johannesburg", "tags": ["address"] },
+        { "label": "Fastell VAT Number", "value": "4010123456", "tags": ["vat", "tax"] },
+        { "label": "Acme Corp Company Name", "value": "Acme Corporation (Pty) Ltd", "tags": ["company", "name"] },
+        { "label": "Acme Corp VAT Number", "value": "4020789012", "tags": ["vat", "tax"] },
+        { "label": "BlakeHoldings Company Name", "value": "Blake Holdings (Pty) Ltd", "tags": ["company", "name"] },
+        { "label": "BlakeHoldings VAT Number", "value": "4030345678", "tags": ["vat", "tax"] }
       ]
     },
     {
@@ -279,6 +293,14 @@ The Smart Field Library should use a local SQLite database (via `rusqlite`) or J
   ]
 }
 ```
+
+**Fuzzy search behaviour:** When the user types into a field (flat or interactive), the
+dropdown matches against **label + value + tags** simultaneously. For example:
+- Typing `"VAT"` → shows all three VAT entries, each with its label ("Fastell VAT Number", "Acme Corp VAT Number", "BlakeHoldings VAT Number") and a preview of the value
+- Typing `"4020"` → shows "Acme Corp VAT Number — 4020789012"
+- Typing `"Fastell"` → shows all Fastell-labelled entries
+
+The dropdown renders each entry as: **label** (bold) — *value preview* (truncated if long).
 
 ---
 

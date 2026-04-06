@@ -32,10 +32,34 @@ Deferred from Phase 1. Implement pen/draw mode with mouse-drawn strokes.
 
 ### M4: Smart Field Library
 - Local storage for commonly-used field values (name, address, company, VAT, etc.)
-- Create, edit, delete library entries
+- Every entry has a **label** for disambiguation — users can save the same type of
+  value multiple times with different labels (e.g., "Company A VAT Number",
+  "Company B VAT Number", "Company C VAT Number")
+- Create, edit, delete library entries (label + value + optional tags + category)
 - Sidebar or popup to browse and insert library values
-- Auto-suggest matching fields when filling forms
+
+#### Fuzzy Search Dropdown (core UX)
+- Works identically for both flat PDF filling (M3) and interactive form filling (M2)
+- Workflow:
+  1. User selects the text tool (or clicks an interactive form field)
+  2. User clicks the target area on the page
+  3. User starts typing — after 2+ characters, a fuzzy dropdown appears
+  4. Fuzzy matching runs against label, value, and tags simultaneously
+  5. Dropdown entries show: **label** (bold) — *value preview* (truncated)
+  6. User can arrow-key navigate and Enter to select, or dismiss and keep typing freely
+- Examples:
+  - Typing "VAT" → shows all VAT-labelled entries with their labels for disambiguation
+  - Typing "4020" → matches the specific entry whose value contains "4020"
+  - Typing "Acme" → shows all entries labelled with "Acme"
+- Fuzzy algorithm: case-insensitive substring or Levenshtein-distance-based ranking
+  (evaluate `fuzzy-matcher` or `nucleo` crate for Rust-side matching, or implement
+  in TypeScript on the frontend if library is small enough)
+
+#### Library Management
 - Persist library to `~/.config/simplex-pdf/field_library.json`
+- Import/export library as JSON
+- "Fill from profile" — one-click populate matching fields on interactive forms
+- Remember form field mappings per PDF template (hash-keyed)
 
 ### M5: Saved Signatures
 - Draw signature with mouse/trackpad
