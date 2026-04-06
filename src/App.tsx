@@ -122,7 +122,9 @@ function App() {
     const handler = (e: KeyboardEvent) => {
       const ctrl = e.ctrlKey || e.metaKey;
 
-      if (ctrl && e.key === "f" && docInfo) {
+      // Ctrl+F — Tauri webview may report this as "f" or intercept it.
+      // Also handle Ctrl+Shift+F as fallback.
+      if (ctrl && (e.key === "f" || e.key === "F") && docInfo) {
         e.preventDefault();
         setSearchOpen(true);
         return;
@@ -159,12 +161,15 @@ function App() {
       } else if (ctrl && e.key === "o") {
         e.preventDefault();
         handleOpen();
-      } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+      } else if (e.key === "ArrowLeft") {
         e.preventDefault();
         handlePageChange(currentPage - 1);
-      } else if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+      } else if (e.key === "ArrowRight") {
         e.preventDefault();
         handlePageChange(currentPage + 1);
+      } else if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+        // Let the browser handle Up/Down for native scrolling
+        return;
       } else if (e.key === "Home") {
         e.preventDefault();
         handlePageChange(0);
@@ -173,10 +178,10 @@ function App() {
         handlePageChange(docInfo.pageCount - 1);
       } else if (e.key === "PageUp") {
         e.preventDefault();
-        handlePageChange(currentPage - 10);
+        handlePageChange(currentPage - 1);
       } else if (e.key === "PageDown") {
         e.preventDefault();
-        handlePageChange(currentPage + 10);
+        handlePageChange(currentPage + 1);
       }
     };
 

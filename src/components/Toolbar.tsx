@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import type { DocumentInfo } from "../lib/api";
 
 export type AnnotationMode =
@@ -58,6 +59,21 @@ export default function Toolbar({
 }: ToolbarProps) {
   const pageCount = docInfo?.pageCount ?? 0;
 
+  // Local state for page input so user can type freely
+  const [pageInputValue, setPageInputValue] = useState(String(currentPage + 1));
+  useEffect(() => {
+    setPageInputValue(String(currentPage + 1));
+  }, [currentPage]);
+
+  const commitPageInput = () => {
+    const val = parseInt(pageInputValue, 10);
+    if (!isNaN(val) && val >= 1 && val <= pageCount) {
+      onPageChange(val - 1);
+    } else {
+      setPageInputValue(String(currentPage + 1));
+    }
+  };
+
   const modeBtn = (mode: AnnotationMode, label: string, title: string) => (
     <button
       className={`toolbar-btn ${annotationMode === mode ? "active" : ""}`}
@@ -108,13 +124,17 @@ export default function Toolbar({
             <input
               type="number"
               className="page-input"
-              value={currentPage + 1}
+              value={pageInputValue}
               min={1}
               max={pageCount}
-              onChange={(e) => {
-                const val = parseInt(e.target.value, 10);
-                if (!isNaN(val)) onPageChange(val - 1);
+              onChange={(e) => setPageInputValue(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  commitPageInput();
+                  (e.target as HTMLInputElement).blur();
+                }
               }}
+              onBlur={commitPageInput}
             />
             <span>/ {pageCount}</span>
           </span>

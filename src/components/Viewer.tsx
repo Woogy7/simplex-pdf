@@ -73,6 +73,11 @@ export default function Viewer({
     renderingRef.current.clear();
   }, [pageCount]);
 
+  // Clear render cache when zoom changes so pages re-render at new resolution
+  useEffect(() => {
+    renderingRef.current.clear();
+  }, [zoom]);
+
   // Set up intersection observer
   useEffect(() => {
     if (dimensions.length === 0) return;
