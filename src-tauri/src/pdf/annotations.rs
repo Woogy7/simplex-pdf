@@ -90,16 +90,27 @@ pub fn save_annotations_and_write(
     // We MUST NOT drop these pages until after save_to_file.
     let mut open_pages: Vec<PdfPage<'_>> = Vec::new();
 
+    let original_size = std::fs::metadata(path).map(|m| m.len()).unwrap_or(0);
+    eprintln!("[save] Original file size: {original_size} bytes");
+    eprintln!("[save] Annotations to write: {}", annotations.len());
+
     for (page_index, page_anns) in &by_page {
         let mut page = pdf.pages().get(*page_index)?;
+
+        let before_count = page.annotations().iter().count();
+        eprintln!("[save] Page {page_index}: {before_count} existing annotations");
+
         let ann_collection = page.annotations_mut();
 
         for ann in page_anns {
             let pdf_color = to_pdf_color(&ann.color);
             let pdf_rect = to_pdf_rect(&ann.rect);
 
-            // Macro to configure a markup annotation (they return different
-            // concrete types, so we can't unify them in a match expression).
+            eprintln!(
+                "[save]   Creating {} at ({},{},{},{})",
+                ann.annotation_type, ann.rect.left, ann.rect.bottom, ann.rect.right, ann.rect.top
+            );
+
             macro_rules! configure_markup {
                 ($ann:expr, $rect:expr, $color:expr, $qp:expr) => {{
                     $ann.set_bounds($rect)?;
@@ -115,42 +126,52 @@ pub fn save_annotations_and_write(
                     let qp = PdfQuadPoints::from_rect(&pdf_rect);
                     let mut a = ann_collection.create_highlight_annotation()?;
                     configure_markup!(a, pdf_rect, pdf_color, qp);
+                    eprintln!("[save]   -> Highlight created OK");
                 }
                 "underline" => {
                     let qp = PdfQuadPoints::from_rect(&pdf_rect);
                     let mut a = ann_collection.create_underline_annotation()?;
                     configure_markup!(a, pdf_rect, pdf_color, qp);
+                    eprintln!("[save]   -> Underline created OK");
                 }
                 "strikeout" => {
                     let qp = PdfQuadPoints::from_rect(&pdf_rect);
                     let mut a = ann_collection.create_strikeout_annotation()?;
                     configure_markup!(a, pdf_rect, pdf_color, qp);
+                    eprintln!("[save]   -> Strikeout created OK");
                 }
                 "note" => {
                     let content = ann.content.as_deref().unwrap_or("");
+                    eprintln!("[save]   Note content: {content:?}");
                     let mut created = ann_collection.create_text_annotation(content)?;
                     created.set_bounds(pdf_rect)?;
                     created.set_fill_color(to_pdf_color(&ann.color))?;
+                    eprintln!("[save]   -> Text note created OK");
                 }
-                _ => {}
+                other => {
+                    eprintln!("[save]   -> Unknown type: {other}");
+                }
             }
         }
 
-        // Keep this page handle alive — do NOT let it drop yet.
+        // Verify annotations were added
+        let after_count = page.annotations().iter().count();
+        eprintln!("[save] Page {page_index}: {after_count} annotations after adding");
+
         open_pages.push(page);
     }
 
-    // Save to bytes while all modified pages are still open.
-    // We cannot use save_to_file because load_pdf_from_file holds the
-    // source file open via FPDF_LoadCustomDocument — writing to the same
-    // path while it's being read from silently corrupts or no-ops.
+    eprintln!("[save] Saving to bytes...");
     let bytes = pdf.save_to_bytes()?;
+    eprintln!("[save] Saved {} bytes", bytes.len());
 
-    // Pages can be dropped now — bytes are captured.
     drop(open_pages);
 
-    // Write the bytes to the original file path.
-    std::fs::write(path, bytes)?;
+    std::fs::write(path, &bytes)?;
+    eprintln!(
+        "[save] Written to {path} ({} bytes, was {original_size})",
+        bytes.len()
+    );
 
     Ok(())
 }
