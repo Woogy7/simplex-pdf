@@ -62,17 +62,23 @@ function App() {
       if (!path) return;
       const info = await openFile(path);
       const dims = await getPageDimensions();
-      // Load existing annotations from the PDF and convert to overlay format
-      const existing = await getAnnotations();
-      const loadedAnns: Annotation[] = existing.map((ea) =>
-        createAnnotation(
-          ea.pageIndex,
-          ea.annotationType as Annotation["type"],
-          ea.rect,
-          ea.color,
-          ea.content ?? undefined,
-        ),
-      );
+      // Load existing annotations from the PDF and convert to overlay format.
+      // Non-fatal: if reading fails, just open without annotations.
+      let loadedAnns: Annotation[] = [];
+      try {
+        const existing = await getAnnotations();
+        loadedAnns = existing.map((ea) =>
+          createAnnotation(
+            ea.pageIndex,
+            ea.annotationType as Annotation["type"],
+            ea.rect,
+            ea.color,
+            ea.content ?? undefined,
+          ),
+        );
+      } catch (err) {
+        console.warn("Could not load existing annotations:", err);
+      }
       setDocInfo(info);
       setDimensions(dims);
       setCurrentPage(0);

@@ -206,44 +206,51 @@ pub fn read_all_annotations(document: &Document) -> Result<Vec<ExistingAnnotatio
     let mut result = Vec::new();
 
     for page_index in 0..pages.len() {
-        let page = pages.get(page_index)?;
+        let Ok(page) = pages.get(page_index) else {
+            continue;
+        };
+
         for annotation in page.annotations().iter() {
-            let ann_type = annotation.annotation_type();
-            let type_name = match ann_type {
-                PdfPageAnnotationType::Highlight => "highlight",
-                PdfPageAnnotationType::Underline => "underline",
-                PdfPageAnnotationType::Strikeout => "strikeout",
-                PdfPageAnnotationType::Text => "note",
-                _ => continue, // Skip unsupported types
-            };
+            // Wrap each annotation read defensively — skip any that fail.
+            let read_result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                let ann_type = annotation.annotation_type();
+                let type_name = match ann_type {
+                    PdfPageAnnotationType::Highlight => "highlight",
+                    PdfPageAnnotationType::Underline => "underline",
+                    PdfPageAnnotationType::Strikeout => "strikeout",
+                    PdfPageAnnotationType::Text => "note",
+                    _ => return None,
+                };
 
-            let Ok(bounds) = annotation.bounds() else {
-                continue;
-            };
+                let bounds = annotation.bounds().ok()?;
 
-            // Try to get the annotation color
-            let color = annotation
-                .stroke_color()
-                .or_else(|_| annotation.fill_color())
-                .map_or_else(
-                    |_| "#FFD500".to_string(),
-                    |c| format!("#{:02X}{:02X}{:02X}", c.red(), c.green(), c.blue()),
-                );
+                let color = annotation
+                    .stroke_color()
+                    .or_else(|_| annotation.fill_color())
+                    .map_or_else(
+                        |_| "#FFD500".to_string(),
+                        |c| format!("#{:02X}{:02X}{:02X}", c.red(), c.green(), c.blue()),
+                    );
 
-            let content = annotation.contents();
+                let content = annotation.contents();
 
-            result.push(ExistingAnnotation {
-                page_index,
-                annotation_type: type_name.to_string(),
-                rect: AnnotationRect {
-                    left: bounds.left().value,
-                    top: bounds.top().value,
-                    right: bounds.right().value,
-                    bottom: bounds.bottom().value,
-                },
-                color,
-                content,
-            });
+                Some(ExistingAnnotation {
+                    page_index,
+                    annotation_type: type_name.to_string(),
+                    rect: AnnotationRect {
+                        left: bounds.left().value,
+                        top: bounds.top().value,
+                        right: bounds.right().value,
+                        bottom: bounds.bottom().value,
+                    },
+                    color,
+                    content,
+                })
+            }));
+
+            if let Ok(Some(ann)) = read_result {
+                result.push(ann);
+            }
         }
     }
 
