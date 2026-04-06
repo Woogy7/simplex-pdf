@@ -27,6 +27,7 @@ First build is slow (~2 min with optimized deps). Subsequent builds: 3-7 seconds
 - [x] Toolbar shows filename
 - [x] Page count correct
 - [x] Cancel picker — no crash
+- [ ] Ctrl+O opens native file picker
 
 ### Page Navigation — PASS
 - [x] Arrow buttons navigate pages

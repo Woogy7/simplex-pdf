@@ -27,6 +27,7 @@
    - Single page, continuous scroll, and two-page view modes
    - Dark mode / night reading mode
    - Keyboard shortcuts for navigation
+   - Ctrl+O to open a file via native file dialog
 
 2. **Search in Page**
    - Full-text search within the current PDF
