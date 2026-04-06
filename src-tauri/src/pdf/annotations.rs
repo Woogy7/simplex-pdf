@@ -2,12 +2,22 @@
 //!
 //! Uses `PDFium` to add, read, and modify annotations on PDF pages.
 //! Supports highlight, underline, strikeout, and text (sticky note) types.
+//!
+//! Color persistence: `PDFium`'s `FPDFAnnot_GetColor` segfaults on annotations
+//! we create, so we store the hex color in the annotation's `/Contents` field
+//! with a `simplex:` prefix. On read, we parse our prefix for color and fall
+//! back to defaults for annotations from other PDF editors.
 
 use pdfium_render::prelude::*;
 use serde::{Deserialize, Serialize};
 
 use super::parser::Document;
 use crate::utils::error::AppError;
+
+/// Prefix used in the `/Contents` field to store our color metadata.
+const COLOR_PREFIX: &str = "simplex:";
+/// Separator between color and note text in `/Contents`.
+const COLOR_SEP: char = '|';
 
 /// A rectangle in PDF coordinate space (origin at bottom-left of the page).
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -37,6 +47,13 @@ pub struct AnnotationColor {
     pub a: u8,
 }
 
+impl AnnotationColor {
+    /// Converts to a hex color string like `#FF0000`.
+    fn to_hex(&self) -> String {
+        format!("#{:02X}{:02X}{:02X}", self.r, self.g, self.b)
+    }
+}
+
 /// A single annotation to persist to the PDF, received from the frontend.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -63,11 +80,47 @@ fn to_pdf_color(color: &AnnotationColor) -> PdfColor {
     PdfColor::new(color.r, color.g, color.b, color.a)
 }
 
+/// Encodes color (and optionally note text) into a `/Contents` string.
+///
+/// - Markup: `simplex:#FF0000`
+/// - Note:   `simplex:#FF0000|actual note text`
+fn encode_contents(color: &AnnotationColor, note_text: Option<&str>) -> String {
+    let hex = color.to_hex();
+    match note_text {
+        Some(text) => format!("{COLOR_PREFIX}{hex}{COLOR_SEP}{text}"),
+        None => format!("{COLOR_PREFIX}{hex}"),
+    }
+}
+
+/// Decodes color and note text from a `/Contents` string.
+///
+/// Returns `(color_hex, note_text)`. If the string doesn't have our prefix,
+/// returns `None` (annotation from another editor).
+fn decode_contents(contents: &str) -> Option<(String, Option<String>)> {
+    let rest = contents.strip_prefix(COLOR_PREFIX)?;
+    if let Some(sep_pos) = rest.find(COLOR_SEP) {
+        let color = rest[..sep_pos].to_string();
+        let text = rest[sep_pos + 1..].to_string();
+        Some((color, Some(text)))
+    } else {
+        Some((rest.to_string(), None))
+    }
+}
+
+/// Default color for annotation types from other editors.
+fn default_color(type_name: &str) -> String {
+    match type_name {
+        "underline" => "#000000",
+        "strikeout" => "#FF0000",
+        _ => "#FFD500",
+    }
+    .to_string()
+}
+
 /// Writes all annotations to the document and saves to disk in a single operation.
 ///
-/// This function keeps all page handles alive until after `save_to_file` completes.
-/// `PDFium` discards annotations when a page handle is closed (`FPDF_ClosePage`),
-/// so we must hold every modified page open through the save.
+/// Keeps all page handles alive until after save completes, because `PDFium`
+/// discards annotations when a page handle is closed.
 ///
 /// # Errors
 ///
@@ -79,15 +132,12 @@ pub fn save_annotations_and_write(
     let pdf = document.inner();
     let path = &document.info().file_path;
 
-    // Group annotations by page index.
     let mut by_page: std::collections::BTreeMap<i32, Vec<&AnnotationData>> =
         std::collections::BTreeMap::new();
     for ann in annotations {
         by_page.entry(ann.page_index).or_default().push(ann);
     }
 
-    // Open all pages that need annotations and keep them alive in this vec.
-    // We MUST NOT drop these pages until after save_to_file.
     let mut open_pages: Vec<PdfPage<'_>> = Vec::new();
 
     for (page_index, page_anns) in &by_page {
@@ -99,34 +149,40 @@ pub fn save_annotations_and_write(
             let pdf_rect = to_pdf_rect(&ann.rect);
 
             macro_rules! configure_markup {
-                ($ann:expr, $rect:expr, $color:expr, $qp:expr) => {{
-                    $ann.set_bounds($rect)?;
-                    $ann.set_stroke_color($color)?;
-                    let _ = $ann.set_fill_color($color);
-                    $ann.attachment_points_mut()
+                ($created:expr, $rect:expr, $color:expr, $qp:expr, $contents:expr) => {{
+                    $created.set_bounds($rect)?;
+                    $created.set_stroke_color($color)?;
+                    let _ = $created.set_fill_color($color);
+                    $created.attachment_points_mut()
                         .create_attachment_point_at_end($qp)?;
+                    // Store color in /Contents so we can read it back
+                    let _ = $created.set_contents($contents);
                 }};
             }
 
             match ann.annotation_type.as_str() {
                 "highlight" => {
                     let qp = PdfQuadPoints::from_rect(&pdf_rect);
+                    let contents = encode_contents(&ann.color, None);
                     let mut a = ann_collection.create_highlight_annotation()?;
-                    configure_markup!(a, pdf_rect, pdf_color, qp);
+                    configure_markup!(a, pdf_rect, pdf_color, qp, &contents);
                 }
                 "underline" => {
                     let qp = PdfQuadPoints::from_rect(&pdf_rect);
+                    let contents = encode_contents(&ann.color, None);
                     let mut a = ann_collection.create_underline_annotation()?;
-                    configure_markup!(a, pdf_rect, pdf_color, qp);
+                    configure_markup!(a, pdf_rect, pdf_color, qp, &contents);
                 }
                 "strikeout" => {
                     let qp = PdfQuadPoints::from_rect(&pdf_rect);
+                    let contents = encode_contents(&ann.color, None);
                     let mut a = ann_collection.create_strikeout_annotation()?;
-                    configure_markup!(a, pdf_rect, pdf_color, qp);
+                    configure_markup!(a, pdf_rect, pdf_color, qp, &contents);
                 }
                 "note" => {
-                    let content = ann.content.as_deref().unwrap_or("");
-                    let mut created = ann_collection.create_text_annotation(content)?;
+                    let note_text = ann.content.as_deref().unwrap_or("");
+                    let contents = encode_contents(&ann.color, Some(note_text));
+                    let mut created = ann_collection.create_text_annotation(&contents)?;
                     created.set_bounds(pdf_rect)?;
                     created.set_fill_color(to_pdf_color(&ann.color))?;
                 }
@@ -162,8 +218,8 @@ pub struct ExistingAnnotation {
 
 /// Reads all supported annotations from the document.
 ///
-/// Returns highlight, underline, strikeout, and text annotations
-/// so the frontend can render them as overlays.
+/// Parses our `simplex:` color prefix from `/Contents` for annotations we
+/// created. Annotations from other editors get default colors.
 ///
 /// # Errors
 ///
@@ -200,17 +256,19 @@ pub fn read_all_annotations(document: &Document) -> Result<Vec<ExistingAnnotatio
                 continue;
             };
 
-            // NOTE: Reading annotation colors via FPDFAnnot_GetColor segfaults
-            // on some annotations (confirmed crash on highlight annotations from
-            // PDFs saved by this app). Use default colors per type instead.
-            let color = match type_name {
-                "underline" => "#000000",
-                "strikeout" => "#FF0000",
-                _ => "#FFD500",
-            }
-            .to_string();
-
-            let content = annotation.contents();
+            // Read /Contents and try to extract our color prefix.
+            let raw_contents = annotation.contents();
+            let (color, content) = if let Some(ref raw) = raw_contents {
+                if let Some((hex, text)) = decode_contents(raw) {
+                    (hex, text)
+                } else {
+                    // Annotation from another editor — use raw contents as text,
+                    // default color.
+                    (default_color(type_name), raw_contents)
+                }
+            } else {
+                (default_color(type_name), None)
+            };
 
             result.push(ExistingAnnotation {
                 page_index,

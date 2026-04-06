@@ -138,8 +138,8 @@ You need PDF files to test with. Some options:
 - [x] Default color is yellow
 
 ### Save (Ctrl+S)
-- [ ] Make annotations on a PDF
-- [ ] Click "Save" button (or press Ctrl+S)
+- [x] Make annotations on a PDF
+- [x] Click "Save" button (or press Ctrl+S)
 - [ ] Close and reopen the same PDF — annotations are still there
 - [ ] **WARNING**: Save overwrites the original file. Use a copy for testing!
 
