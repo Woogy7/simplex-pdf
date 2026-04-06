@@ -39,7 +39,7 @@ and build a functional viewer component that displays PDF pages.
 **Done when:** Frontend can open a file and request rendered pages
 
 ### Task 4: Build frontend Viewer component
-- File open button/menu that triggers native file dialog (also via Ctrl+O shortcut)
+- File open button/menu that triggers native file dialog
 - Display rendered PDF pages as images
 - Basic page navigation (previous/next, go to page)
 - Show current page number and total pages

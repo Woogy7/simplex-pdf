@@ -4,6 +4,9 @@
 Ship the key differentiator: smart form filling with a field library and saved
 signatures. Also add the freehand drawing tool deferred from Phase 1.
 
+## Deferred from Phase 1
+- **Ctrl+O shortcut** to open a file via native file dialog (button exists, shortcut missing)
+
 ## Milestones
 
 ### M1: Freehand Drawing Tool
