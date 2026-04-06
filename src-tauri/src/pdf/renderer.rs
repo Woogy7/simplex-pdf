@@ -10,9 +10,9 @@ use crate::utils::error::AppError;
 use super::parser::{Document, PageIndex};
 
 /// Default rendering DPI used when no scale factor is specified.
-/// 96 DPI matches standard screen resolution. The frontend scale
-/// parameter multiplies this (e.g. 1.5 = 144 DPI for crisp text).
-const DEFAULT_DPI: f32 = 96.0;
+/// 144 DPI (1.5x standard) for crisp text on modern displays.
+/// The frontend scale parameter multiplies this further for zoom.
+const DEFAULT_DPI: f32 = 144.0;
 
 /// Renders a single page of a document to PNG bytes.
 ///

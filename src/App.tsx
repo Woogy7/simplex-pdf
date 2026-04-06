@@ -103,8 +103,7 @@ function App() {
         content: a.content,
       }));
       await saveWithAnnotations(annData);
-      // Clear frontend annotations after they've been written to the PDF
-      setAnnotations([]);
+      // Keep annotations visible — they're now in the PDF AND shown as overlays.
     } catch (err) {
       setError(String(err));
     }
