@@ -39,12 +39,15 @@ Ship a usable, fast PDF viewer with search and basic annotation support.
 
 ## Key Decisions
 - [x] PDFium vs MuPDF — **PDFium chosen** (2026-04-06)
-  - pdfium-render (v0.9.0) is the only crate covering all requirements: rendering, text extraction, forms, annotations, page manipulation
+  - pdfium-render (v0.9.0) covers rendering, text extraction, forms, annotations, page manipulation
   - MuPDF eliminated: AGPL license, no form field support, Windows broken, soundness bugs
-  - PDFium shipped as dynamic library (~3-6MB) bundled with app via Tauri resources
-  - lopdf added as complement for structural PDF manipulation (merge, raw object access)
-- [ ] Frontend state management — React Context vs Zustand
-- [ ] Annotation storage format
+  - PDFium shipped as dynamic library (~7.5MB) bundled with app
+- [x] Frontend state management — **React useState** (sufficient for Phase 1, revisit if needed)
+- [x] Annotation storage format — **CSS overlays + /Contents field color encoding**
+  - Annotations displayed as CSS overlays for instant visual feedback
+  - Colors encoded in /Contents with `simplex:#HEXCOLOR` prefix
+  - Written to PDFium on save for interoperability with other viewers
+- [x] Freehand drawing — **deferred to Phase 2** (pdfium-render lacks safe ink stroke API)
 
 ## References
 - Full spec: `simplex-pdf-spec.md`
