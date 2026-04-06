@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
-import Toolbar from "./components/Toolbar";
+import Toolbar, { type AnnotationMode } from "./components/Toolbar";
 import Viewer from "./components/Viewer";
 import Sidebar from "./components/Sidebar";
 import SearchBar from "./components/SearchBar";
@@ -7,6 +7,7 @@ import {
   pickPdfFile,
   openFile,
   getPageDimensions,
+  savePdf,
   type DocumentInfo,
   type PageDimensions,
   type SearchResults,
@@ -28,6 +29,8 @@ function App() {
     null,
   );
   const [currentMatchIndex, setCurrentMatchIndex] = useState(0);
+  const [annotationMode, setAnnotationMode] = useState<AnnotationMode>(null);
+  const [annotationColor, setAnnotationColor] = useState("#FFD500");
   const [error, setError] = useState<string | null>(null);
 
   const handleOpen = useCallback(async () => {
@@ -43,6 +46,16 @@ function App() {
       setCurrentPage(0);
       setZoom(1.0);
       setSearchResults(null);
+      setAnnotationMode(null);
+    } catch (err) {
+      setError(String(err));
+    }
+  }, []);
+
+  const handleSave = useCallback(async () => {
+    try {
+      setError(null);
+      await savePdf();
     } catch (err) {
       setError(String(err));
     }
@@ -91,16 +104,25 @@ function App() {
     const handler = (e: KeyboardEvent) => {
       const ctrl = e.ctrlKey || e.metaKey;
 
-      // Ctrl+F always works (even without a doc)
       if (ctrl && e.key === "f" && docInfo) {
         e.preventDefault();
         setSearchOpen(true);
         return;
       }
 
+      if (ctrl && e.key === "s" && docInfo) {
+        e.preventDefault();
+        handleSave();
+        return;
+      }
+
+      if (e.key === "Escape") {
+        setAnnotationMode(null);
+        return;
+      }
+
       if (!docInfo) return;
 
-      // Don't capture nav keys when typing in search input
       if (
         e.target instanceof HTMLInputElement ||
         e.target instanceof HTMLTextAreaElement
@@ -146,6 +168,7 @@ function App() {
     docInfo,
     currentPage,
     handleOpen,
+    handleSave,
     handlePageChange,
     handleZoomIn,
     handleZoomOut,
@@ -159,6 +182,8 @@ function App() {
         currentPage={currentPage}
         zoom={zoom}
         sidebarOpen={sidebarOpen}
+        annotationMode={annotationMode}
+        annotationColor={annotationColor}
         onOpen={handleOpen}
         onPageChange={handlePageChange}
         onZoomIn={handleZoomIn}
@@ -166,6 +191,9 @@ function App() {
         onZoomReset={handleZoomReset}
         onToggleSidebar={toggleSidebar}
         onSearch={() => setSearchOpen(true)}
+        onAnnotationMode={setAnnotationMode}
+        onAnnotationColor={setAnnotationColor}
+        onSave={handleSave}
       />
       {searchOpen && (
         <SearchBar
@@ -194,6 +222,8 @@ function App() {
               zoom={zoom}
               searchResults={searchResults}
               currentMatchIndex={currentMatchIndex}
+              annotationMode={annotationMode}
+              annotationColor={annotationColor}
               onPageChange={handlePageChange}
             />
           </>

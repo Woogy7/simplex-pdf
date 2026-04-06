@@ -287,6 +287,50 @@ body {
   border-color: rgba(255, 100, 0, 0.8);
 }
 
+/* --- Annotations --- */
+
+.color-picker {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 4px;
+}
+
+.color-dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  padding: 0;
+  transition: border-color 0.15s;
+}
+
+.color-dot:hover {
+  border-color: var(--text-secondary);
+}
+
+.color-dot.selected {
+  border-color: var(--text-primary);
+  box-shadow: 0 0 0 1px var(--bg-primary);
+}
+
+.annotation-preview {
+  position: absolute;
+  background: rgba(255, 213, 0, 0.25);
+  border: 1px dashed rgba(255, 180, 0, 0.7);
+  pointer-events: none;
+  border-radius: 2px;
+}
+
+.viewer.annotating {
+  cursor: crosshair;
+}
+
+.viewer.annotating .viewer-page {
+  pointer-events: none;
+}
+
 /* --- Sidebar --- */
 
 .sidebar {
