@@ -14,6 +14,8 @@ const PRESET_COLORS = [
   { name: "Blue", value: "#2196F3" },
   { name: "Red", value: "#F44336" },
   { name: "Purple", value: "#9C27B0" },
+  { name: "Black", value: "#000000" },
+  { name: "White", value: "#FFFFFF" },
 ];
 
 interface ToolbarProps {

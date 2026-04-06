@@ -318,6 +318,10 @@ body {
   transition: border-color 0.15s;
 }
 
+.color-dot {
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.15);
+}
+
 .color-dot:hover {
   border-color: var(--text-secondary);
 }
@@ -338,11 +342,13 @@ body {
 }
 
 .ann-underline {
-  border-bottom: 2px solid currentColor;
+  /* borderBottomColor set inline */
+  border-bottom: 3px solid;
   background: transparent !important;
 }
 
 .ann-strikeout {
+  /* color set inline, used by ::after */
   background: transparent !important;
   display: flex;
   align-items: center;
@@ -356,10 +362,58 @@ body {
   background: currentColor;
 }
 
+/* --- Sticky Notes --- */
+
 .ann-note {
+  position: absolute;
+  pointer-events: auto;
+  cursor: pointer;
+  background: #ffe066;
+  border: 1px solid #d4a800;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 1px 1px 4px rgba(0, 0, 0, 0.2);
+  z-index: 2;
+}
+
+.ann-note-icon {
+  font-size: 14px;
+  line-height: 1;
+  color: #8b6914;
+}
+
+.ann-note-popup {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 4px;
+  padding: 8px 10px;
+  background: #fffde7;
+  border: 1px solid #d4a800;
   border-radius: 4px;
-  border: 1px solid rgba(0, 0, 0, 0.2);
-  cursor: default;
+  box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.15);
+  font-size: 0.8rem;
+  color: #333;
+  white-space: pre-wrap;
+  max-width: 250px;
+  min-width: 120px;
+  z-index: 10;
+}
+
+.ann-note:hover .ann-note-popup {
+  display: block;
+}
+
+@media (prefers-color-scheme: dark) {
+  [data-theme="dark"] .ann-note-popup,
+  :root:not([data-theme="light"]) .ann-note-popup {
+    background: #3d3520;
+    border-color: #6b5a1e;
+    color: #e8e0c8;
+  }
 }
 
 .annotation-preview {

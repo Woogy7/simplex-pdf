@@ -265,27 +265,62 @@ export default function Viewer({
 
     return pageAnns.map((ann) => {
       const css = pdfRectToCss(ann.rect, pageDim);
-      let className = "annotation-overlay";
-      if (ann.type === "highlight") className += " ann-highlight";
-      else if (ann.type === "underline") className += " ann-underline";
-      else if (ann.type === "strikeout") className += " ann-strikeout";
-      else if (ann.type === "note") className += " ann-note";
 
-      return (
-        <div
-          key={ann.id}
-          className={className}
-          style={{
-            left: css.left,
-            top: css.top,
-            width: css.width,
-            height: css.height,
-            ...(ann.type === "highlight" ? { backgroundColor: ann.color + "40" } : {}),
-            ...(ann.type === "note" ? { backgroundColor: ann.color + "CC" } : {}),
-          }}
-          title={ann.content || ann.type}
-        />
-      );
+      if (ann.type === "note") {
+        // Sticky note: fixed icon-sized square, standard yellow design
+        const noteSize = 24 * zoom;
+        return (
+          <div
+            key={ann.id}
+            className="ann-note"
+            style={{ left: css.left, top: css.top, width: noteSize, height: noteSize }}
+          >
+            <span className="ann-note-icon">&#9998;</span>
+            <div className="ann-note-popup">{ann.content}</div>
+          </div>
+        );
+      }
+
+      if (ann.type === "highlight") {
+        return (
+          <div
+            key={ann.id}
+            className="annotation-overlay ann-highlight"
+            style={{
+              left: css.left, top: css.top, width: css.width, height: css.height,
+              backgroundColor: ann.color + "50",
+            }}
+          />
+        );
+      }
+
+      if (ann.type === "underline") {
+        return (
+          <div
+            key={ann.id}
+            className="annotation-overlay ann-underline"
+            style={{
+              left: css.left, top: css.top, width: css.width, height: css.height,
+              borderBottomColor: ann.color,
+            }}
+          />
+        );
+      }
+
+      if (ann.type === "strikeout") {
+        return (
+          <div
+            key={ann.id}
+            className="annotation-overlay ann-strikeout"
+            style={{
+              left: css.left, top: css.top, width: css.width, height: css.height,
+              color: ann.color,
+            }}
+          />
+        );
+      }
+
+      return null;
     });
   };
 
