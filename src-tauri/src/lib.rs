@@ -33,6 +33,7 @@ pub fn run() {
             commands::file::render_page,
             commands::file::get_page_dimensions,
             commands::search::search_text,
+            commands::annotate::get_annotations,
             commands::annotate::save_with_annotations,
             commands::annotate::save_pdf,
         ])

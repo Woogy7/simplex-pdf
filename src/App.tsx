@@ -7,12 +7,14 @@ import {
   pickPdfFile,
   openFile,
   getPageDimensions,
+  getAnnotations,
   saveWithAnnotations,
   type DocumentInfo,
   type PageDimensions,
   type SearchResults,
 } from "./lib/api";
 import type { Annotation } from "./lib/annotations";
+import { createAnnotation } from "./lib/annotations";
 import "./styles/main.css";
 
 const MIN_ZOOM = 0.25;
@@ -60,13 +62,24 @@ function App() {
       if (!path) return;
       const info = await openFile(path);
       const dims = await getPageDimensions();
+      // Load existing annotations from the PDF and convert to overlay format
+      const existing = await getAnnotations();
+      const loadedAnns: Annotation[] = existing.map((ea) =>
+        createAnnotation(
+          ea.pageIndex,
+          ea.annotationType as Annotation["type"],
+          ea.rect,
+          ea.color,
+          ea.content ?? undefined,
+        ),
+      );
       setDocInfo(info);
       setDimensions(dims);
       setCurrentPage(0);
       setZoom(1.0);
       setSearchResults(null);
       setAnnotationMode(null);
-      setAnnotations([]);
+      setAnnotations(loadedAnns);
     } catch (err) {
       setError(String(err));
     }

@@ -94,6 +94,20 @@ export interface AnnotationData {
   content?: string;
 }
 
+/** Existing annotation read from the PDF. */
+export interface ExistingAnnotation {
+  pageIndex: number;
+  annotationType: string;
+  rect: { left: number; top: number; right: number; bottom: number };
+  color: string;
+  content: string | null;
+}
+
+/** Reads all existing annotations from the currently open document. */
+export async function getAnnotations(): Promise<ExistingAnnotation[]> {
+  return invoke("get_annotations");
+}
+
 /** Writes all annotations to the PDF and saves to disk. */
 export async function saveWithAnnotations(
   annotations: AnnotationData[],

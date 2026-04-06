@@ -5,7 +5,7 @@
 use tauri::State;
 
 use crate::commands::file::OpenDocument;
-use crate::pdf::annotations::{self, AnnotationData};
+use crate::pdf::annotations::{self, AnnotationData, ExistingAnnotation};
 use crate::utils::error::AppError;
 
 /// Writes all pending annotations to the PDF and saves it to disk.
@@ -23,6 +23,22 @@ pub fn save_with_annotations(
         .map_err(|e| AppError::Other(format!("Lock poisoned: {e}")))?;
     let doc = guard.as_ref().ok_or(AppError::NoDocument)?;
     annotations::save_annotations_and_write(doc, &annotations)
+}
+
+/// Reads all existing annotations from the currently open document.
+///
+/// Returns highlight, underline, strikeout, and text annotations
+/// so the frontend can render them as overlays.
+#[tauri::command]
+pub fn get_annotations(
+    state: State<'_, OpenDocument>,
+) -> Result<Vec<ExistingAnnotation>, AppError> {
+    let guard = state
+        .0
+        .lock()
+        .map_err(|e| AppError::Other(format!("Lock poisoned: {e}")))?;
+    let doc = guard.as_ref().ok_or(AppError::NoDocument)?;
+    annotations::read_all_annotations(doc)
 }
 
 /// Saves the currently open document to disk without adding new annotations.

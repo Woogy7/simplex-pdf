@@ -175,3 +175,77 @@ pub fn save_annotations_and_write(
 
     Ok(())
 }
+
+/// An existing annotation read from the PDF.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ExistingAnnotation {
+    /// Zero-based page index.
+    pub page_index: i32,
+    /// Annotation type name.
+    pub annotation_type: String,
+    /// Bounding rectangle in PDF points.
+    pub rect: AnnotationRect,
+    /// Hex color string (e.g. "#FF0000").
+    pub color: String,
+    /// Text content (for text/note annotations).
+    pub content: Option<String>,
+}
+
+/// Reads all supported annotations from the document.
+///
+/// Returns highlight, underline, strikeout, and text annotations
+/// so the frontend can render them as overlays.
+///
+/// # Errors
+///
+/// Returns [`AppError::Pdfium`] if reading annotations fails.
+pub fn read_all_annotations(document: &Document) -> Result<Vec<ExistingAnnotation>, AppError> {
+    let pdf = document.inner();
+    let pages = pdf.pages();
+    let mut result = Vec::new();
+
+    for page_index in 0..pages.len() {
+        let page = pages.get(page_index)?;
+        for annotation in page.annotations().iter() {
+            let ann_type = annotation.annotation_type();
+            let type_name = match ann_type {
+                PdfPageAnnotationType::Highlight => "highlight",
+                PdfPageAnnotationType::Underline => "underline",
+                PdfPageAnnotationType::Strikeout => "strikeout",
+                PdfPageAnnotationType::Text => "note",
+                _ => continue, // Skip unsupported types
+            };
+
+            let Ok(bounds) = annotation.bounds() else {
+                continue;
+            };
+
+            // Try to get the annotation color
+            let color = annotation
+                .stroke_color()
+                .or_else(|_| annotation.fill_color())
+                .map_or_else(
+                    |_| "#FFD500".to_string(),
+                    |c| format!("#{:02X}{:02X}{:02X}", c.red(), c.green(), c.blue()),
+                );
+
+            let content = annotation.contents();
+
+            result.push(ExistingAnnotation {
+                page_index,
+                annotation_type: type_name.to_string(),
+                rect: AnnotationRect {
+                    left: bounds.left().value,
+                    top: bounds.top().value,
+                    right: bounds.right().value,
+                    bottom: bounds.bottom().value,
+                },
+                color,
+                content,
+            });
+        }
+    }
+
+    Ok(result)
+}
