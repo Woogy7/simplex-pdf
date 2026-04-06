@@ -90,26 +90,13 @@ pub fn save_annotations_and_write(
     // We MUST NOT drop these pages until after save_to_file.
     let mut open_pages: Vec<PdfPage<'_>> = Vec::new();
 
-    let original_size = std::fs::metadata(path).map(|m| m.len()).unwrap_or(0);
-    eprintln!("[save] Original file size: {original_size} bytes");
-    eprintln!("[save] Annotations to write: {}", annotations.len());
-
     for (page_index, page_anns) in &by_page {
         let mut page = pdf.pages().get(*page_index)?;
-
-        let before_count = page.annotations().iter().count();
-        eprintln!("[save] Page {page_index}: {before_count} existing annotations");
-
         let ann_collection = page.annotations_mut();
 
         for ann in page_anns {
             let pdf_color = to_pdf_color(&ann.color);
             let pdf_rect = to_pdf_rect(&ann.rect);
-
-            eprintln!(
-                "[save]   Creating {} at ({},{},{},{})",
-                ann.annotation_type, ann.rect.left, ann.rect.bottom, ann.rect.right, ann.rect.top
-            );
 
             macro_rules! configure_markup {
                 ($ann:expr, $rect:expr, $color:expr, $qp:expr) => {{
@@ -126,52 +113,33 @@ pub fn save_annotations_and_write(
                     let qp = PdfQuadPoints::from_rect(&pdf_rect);
                     let mut a = ann_collection.create_highlight_annotation()?;
                     configure_markup!(a, pdf_rect, pdf_color, qp);
-                    eprintln!("[save]   -> Highlight created OK");
                 }
                 "underline" => {
                     let qp = PdfQuadPoints::from_rect(&pdf_rect);
                     let mut a = ann_collection.create_underline_annotation()?;
                     configure_markup!(a, pdf_rect, pdf_color, qp);
-                    eprintln!("[save]   -> Underline created OK");
                 }
                 "strikeout" => {
                     let qp = PdfQuadPoints::from_rect(&pdf_rect);
                     let mut a = ann_collection.create_strikeout_annotation()?;
                     configure_markup!(a, pdf_rect, pdf_color, qp);
-                    eprintln!("[save]   -> Strikeout created OK");
                 }
                 "note" => {
                     let content = ann.content.as_deref().unwrap_or("");
-                    eprintln!("[save]   Note content: {content:?}");
                     let mut created = ann_collection.create_text_annotation(content)?;
                     created.set_bounds(pdf_rect)?;
                     created.set_fill_color(to_pdf_color(&ann.color))?;
-                    eprintln!("[save]   -> Text note created OK");
                 }
-                other => {
-                    eprintln!("[save]   -> Unknown type: {other}");
-                }
+                _ => {}
             }
         }
-
-        // Verify annotations were added
-        let after_count = page.annotations().iter().count();
-        eprintln!("[save] Page {page_index}: {after_count} annotations after adding");
 
         open_pages.push(page);
     }
 
-    eprintln!("[save] Saving to bytes...");
     let bytes = pdf.save_to_bytes()?;
-    eprintln!("[save] Saved {} bytes", bytes.len());
-
     drop(open_pages);
-
-    std::fs::write(path, &bytes)?;
-    eprintln!(
-        "[save] Written to {path} ({} bytes, was {original_size})",
-        bytes.len()
-    );
+    std::fs::write(path, bytes)?;
 
     Ok(())
 }
@@ -206,53 +174,31 @@ pub fn read_all_annotations(document: &Document) -> Result<Vec<ExistingAnnotatio
     let page_count = pages.len();
     let mut result = Vec::new();
 
-    eprintln!("[read_ann] Starting. Document has {page_count} pages.");
-
     for page_index in 0..page_count {
-        eprintln!("[read_ann] Opening page {page_index}...");
         let Ok(page) = pages.get(page_index) else {
-            eprintln!("[read_ann]   Failed to open page {page_index}, skipping.");
             continue;
         };
 
         let annotations = page.annotations();
         let ann_count = annotations.len();
-        eprintln!("[read_ann]   Page {page_index} has {ann_count} annotations.");
 
         for ann_index in 0..ann_count {
-            eprintln!("[read_ann]   Reading annotation {ann_index}...");
-
             let Ok(annotation) = annotations.get(ann_index) else {
-                eprintln!("[read_ann]     Failed to get annotation {ann_index}, skipping.");
                 continue;
             };
 
-            eprintln!("[read_ann]     Getting type...");
             let ann_type = annotation.annotation_type();
             let type_name = match ann_type {
                 PdfPageAnnotationType::Highlight => "highlight",
                 PdfPageAnnotationType::Underline => "underline",
                 PdfPageAnnotationType::Strikeout => "strikeout",
                 PdfPageAnnotationType::Text => "note",
-                other => {
-                    eprintln!("[read_ann]     Skipping unsupported type: {other:?}");
-                    continue;
-                }
+                _ => continue,
             };
-            eprintln!("[read_ann]     Type: {type_name}");
 
-            eprintln!("[read_ann]     Getting bounds...");
             let Ok(bounds) = annotation.bounds() else {
-                eprintln!("[read_ann]     Failed to get bounds, skipping.");
                 continue;
             };
-            eprintln!(
-                "[read_ann]     Bounds: ({},{},{},{})",
-                bounds.left().value,
-                bounds.bottom().value,
-                bounds.right().value,
-                bounds.top().value
-            );
 
             // NOTE: Reading annotation colors via FPDFAnnot_GetColor segfaults
             // on some annotations (confirmed crash on highlight annotations from
@@ -263,11 +209,8 @@ pub fn read_all_annotations(document: &Document) -> Result<Vec<ExistingAnnotatio
                 _ => "#FFD500",
             }
             .to_string();
-            eprintln!("[read_ann]     Color: {color} (default)");
 
-            eprintln!("[read_ann]     Getting contents...");
             let content = annotation.contents();
-            eprintln!("[read_ann]     Contents: {content:?}");
 
             result.push(ExistingAnnotation {
                 page_index,
@@ -281,10 +224,7 @@ pub fn read_all_annotations(document: &Document) -> Result<Vec<ExistingAnnotatio
                 color,
                 content,
             });
-            eprintln!("[read_ann]     OK.");
         }
     }
-
-    eprintln!("[read_ann] Done. Read {} annotations total.", result.len());
     Ok(result)
 }
