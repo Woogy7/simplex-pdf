@@ -203,56 +203,87 @@ pub struct ExistingAnnotation {
 pub fn read_all_annotations(document: &Document) -> Result<Vec<ExistingAnnotation>, AppError> {
     let pdf = document.inner();
     let pages = pdf.pages();
+    let page_count = pages.len();
     let mut result = Vec::new();
 
-    for page_index in 0..pages.len() {
+    eprintln!("[read_ann] Starting. Document has {page_count} pages.");
+
+    for page_index in 0..page_count {
+        eprintln!("[read_ann] Opening page {page_index}...");
         let Ok(page) = pages.get(page_index) else {
+            eprintln!("[read_ann]   Failed to open page {page_index}, skipping.");
             continue;
         };
 
-        for annotation in page.annotations().iter() {
-            // Wrap each annotation read defensively — skip any that fail.
-            let read_result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                let ann_type = annotation.annotation_type();
-                let type_name = match ann_type {
-                    PdfPageAnnotationType::Highlight => "highlight",
-                    PdfPageAnnotationType::Underline => "underline",
-                    PdfPageAnnotationType::Strikeout => "strikeout",
-                    PdfPageAnnotationType::Text => "note",
-                    _ => return None,
-                };
+        let annotations = page.annotations();
+        let ann_count = annotations.len();
+        eprintln!("[read_ann]   Page {page_index} has {ann_count} annotations.");
 
-                let bounds = annotation.bounds().ok()?;
+        for ann_index in 0..ann_count {
+            eprintln!("[read_ann]   Reading annotation {ann_index}...");
 
-                let color = annotation
-                    .stroke_color()
-                    .or_else(|_| annotation.fill_color())
-                    .map_or_else(
-                        |_| "#FFD500".to_string(),
-                        |c| format!("#{:02X}{:02X}{:02X}", c.red(), c.green(), c.blue()),
-                    );
+            let Ok(annotation) = annotations.get(ann_index) else {
+                eprintln!("[read_ann]     Failed to get annotation {ann_index}, skipping.");
+                continue;
+            };
 
-                let content = annotation.contents();
+            eprintln!("[read_ann]     Getting type...");
+            let ann_type = annotation.annotation_type();
+            let type_name = match ann_type {
+                PdfPageAnnotationType::Highlight => "highlight",
+                PdfPageAnnotationType::Underline => "underline",
+                PdfPageAnnotationType::Strikeout => "strikeout",
+                PdfPageAnnotationType::Text => "note",
+                other => {
+                    eprintln!("[read_ann]     Skipping unsupported type: {other:?}");
+                    continue;
+                }
+            };
+            eprintln!("[read_ann]     Type: {type_name}");
 
-                Some(ExistingAnnotation {
-                    page_index,
-                    annotation_type: type_name.to_string(),
-                    rect: AnnotationRect {
-                        left: bounds.left().value,
-                        top: bounds.top().value,
-                        right: bounds.right().value,
-                        bottom: bounds.bottom().value,
-                    },
-                    color,
-                    content,
-                })
-            }));
+            eprintln!("[read_ann]     Getting bounds...");
+            let Ok(bounds) = annotation.bounds() else {
+                eprintln!("[read_ann]     Failed to get bounds, skipping.");
+                continue;
+            };
+            eprintln!(
+                "[read_ann]     Bounds: ({},{},{},{})",
+                bounds.left().value,
+                bounds.bottom().value,
+                bounds.right().value,
+                bounds.top().value
+            );
 
-            if let Ok(Some(ann)) = read_result {
-                result.push(ann);
-            }
+            eprintln!("[read_ann]     Getting color...");
+            let color = annotation
+                .stroke_color()
+                .or_else(|_| annotation.fill_color())
+                .map_or_else(
+                    |_| "#FFD500".to_string(),
+                    |c| format!("#{:02X}{:02X}{:02X}", c.red(), c.green(), c.blue()),
+                );
+            eprintln!("[read_ann]     Color: {color}");
+
+            eprintln!("[read_ann]     Getting contents...");
+            let content = annotation.contents();
+            eprintln!("[read_ann]     Contents: {content:?}");
+
+            result.push(ExistingAnnotation {
+                page_index,
+                annotation_type: type_name.to_string(),
+                rect: AnnotationRect {
+                    left: bounds.left().value,
+                    top: bounds.top().value,
+                    right: bounds.right().value,
+                    bottom: bounds.bottom().value,
+                },
+                color,
+                content,
+            });
+            eprintln!("[read_ann]     OK.");
         }
     }
 
+    eprintln!("[read_ann] Done. Read {} annotations total.", result.len());
     Ok(result)
 }
