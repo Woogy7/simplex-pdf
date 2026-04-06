@@ -140,11 +140,17 @@ pub fn save_annotations_and_write(
         open_pages.push(page);
     }
 
-    // Save while all modified pages are still open.
-    pdf.save_to_file(path)?;
+    // Save to bytes while all modified pages are still open.
+    // We cannot use save_to_file because load_pdf_from_file holds the
+    // source file open via FPDF_LoadCustomDocument — writing to the same
+    // path while it's being read from silently corrupts or no-ops.
+    let bytes = pdf.save_to_bytes()?;
 
-    // Now pages drop — annotations are already persisted to the file.
+    // Pages can be dropped now — bytes are captured.
     drop(open_pages);
+
+    // Write the bytes to the original file path.
+    std::fs::write(path, bytes)?;
 
     Ok(())
 }

@@ -35,6 +35,8 @@ pub fn save_pdf(state: State<'_, OpenDocument>) -> Result<(), AppError> {
     let doc = guard.as_ref().ok_or(AppError::NoDocument)?;
     let pdf = doc.inner();
     let path = &doc.info().file_path;
-    pdf.save_to_file(path)?;
+    // Save to bytes first, then write — avoids file handle conflict.
+    let bytes = pdf.save_to_bytes()?;
+    std::fs::write(path, bytes)?;
     Ok(())
 }
