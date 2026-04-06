@@ -23,12 +23,14 @@ pub fn pdfium() -> &'static Pdfium {
     static INSTANCE: OnceLock<Pdfium> = OnceLock::new();
 
     INSTANCE.get_or_init(|| {
+        let lib_name = Pdfium::pdfium_platform_library_name();
+
         // Try loading from the lib/ directory next to the executable first.
         let exe_dir = std::env::current_exe()
             .ok()
             .and_then(|p| p.parent().map(Path::to_path_buf));
 
-        let lib_candidates = [
+        let lib_dirs = [
             // Development: lib/ in src-tauri/
             Some(std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("lib")),
             // Production: lib/ next to executable
@@ -37,8 +39,10 @@ pub fn pdfium() -> &'static Pdfium {
             exe_dir,
         ];
 
-        for candidate in lib_candidates.into_iter().flatten() {
-            if let Ok(bindings) = Pdfium::bind_to_library(candidate) {
+        // bind_to_library expects the full file path, not a directory
+        for dir in lib_dirs.into_iter().flatten() {
+            let full_path = dir.join(&lib_name);
+            if let Ok(bindings) = Pdfium::bind_to_library(&full_path) {
                 return Pdfium::new(bindings);
             }
         }
