@@ -161,14 +161,13 @@ function App() {
       } else if (ctrl && e.key === "o") {
         e.preventDefault();
         handleOpen();
-      } else if (e.key === "ArrowLeft") {
-        e.preventDefault();
-        handlePageChange(currentPage - 1);
-      } else if (e.key === "ArrowRight") {
-        e.preventDefault();
-        handlePageChange(currentPage + 1);
-      } else if (e.key === "ArrowUp" || e.key === "ArrowDown") {
-        // Let the browser handle Up/Down for native scrolling
+      } else if (
+        e.key === "ArrowLeft" ||
+        e.key === "ArrowRight" ||
+        e.key === "ArrowUp" ||
+        e.key === "ArrowDown"
+      ) {
+        // Let the browser handle all arrow keys for native scrolling
         return;
       } else if (e.key === "Home") {
         e.preventDefault();
