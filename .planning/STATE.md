@@ -1,18 +1,21 @@
 # Workflow State
 
 ## Current Phase
-Phase 1 — Milestone 1: PDF Loading & Rendering
+Phase 1 — Milestone 2: Navigation & Viewing
 
 ## Status
-Rendering library decided (pdfium-render). Building M1 implementation.
+M1 complete. App can open PDFs, render pages, and navigate with prev/next.
+Moving to M2: smooth scrolling, zoom, thumbnails, view modes, keyboard shortcuts.
 
 ## Last Updated
 2026-04-06
 
+## Completed
+- M1: PDF loading & rendering (pdfium-render, Tauri commands, Viewer component)
+
 ## Next Steps
-- Add pdfium-render and lopdf dependencies
-- Set up PDFium library bundling for development
-- Implement PDF open/load in core engine
-- Implement page rendering to base64 images
-- Build Tauri commands for file open and page rendering
-- Build frontend Viewer component to display rendered pages
+- Continuous scroll mode (render visible pages + buffer)
+- Zoom in/out with keyboard shortcuts and toolbar controls
+- Page thumbnails sidebar
+- View modes: single page, continuous scroll, two-page
+- Keyboard shortcuts for navigation (arrow keys, Page Up/Down, Home/End)

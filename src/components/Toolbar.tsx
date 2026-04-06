@@ -3,22 +3,34 @@ import type { DocumentInfo } from "../lib/api";
 interface ToolbarProps {
   docInfo: DocumentInfo | null;
   currentPage: number;
+  zoom: number;
+  sidebarOpen: boolean;
   onOpen: () => void;
   onPageChange: (page: number) => void;
+  onZoomIn: () => void;
+  onZoomOut: () => void;
+  onZoomReset: () => void;
+  onToggleSidebar: () => void;
 }
 
 export default function Toolbar({
   docInfo,
   currentPage,
+  zoom,
+  sidebarOpen,
   onOpen,
   onPageChange,
+  onZoomIn,
+  onZoomOut,
+  onZoomReset,
+  onToggleSidebar,
 }: ToolbarProps) {
   const pageCount = docInfo?.pageCount ?? 0;
 
   return (
     <header className="toolbar">
       <div className="toolbar-left">
-        <button onClick={onOpen} className="toolbar-btn" title="Open file">
+        <button onClick={onOpen} className="toolbar-btn" title="Open file (Ctrl+O)">
           Open
         </button>
         {docInfo && (
@@ -36,7 +48,7 @@ export default function Toolbar({
             disabled={currentPage <= 0}
             title="Previous page"
           >
-            &larr;
+            &#8592;
           </button>
           <span className="page-indicator">
             <input
@@ -58,12 +70,48 @@ export default function Toolbar({
             disabled={currentPage >= pageCount - 1}
             title="Next page"
           >
-            &rarr;
+            &#8594;
+          </button>
+
+          <span className="toolbar-divider" />
+
+          <button
+            className="toolbar-btn"
+            onClick={onZoomOut}
+            disabled={zoom <= 0.25}
+            title="Zoom out (Ctrl+-)"
+          >
+            &#8722;
+          </button>
+          <button
+            className="toolbar-btn zoom-label"
+            onClick={onZoomReset}
+            title="Reset zoom (Ctrl+0)"
+          >
+            {Math.round(zoom * 100)}%
+          </button>
+          <button
+            className="toolbar-btn"
+            onClick={onZoomIn}
+            disabled={zoom >= 4.0}
+            title="Zoom in (Ctrl+=)"
+          >
+            +
           </button>
         </div>
       )}
 
-      <div className="toolbar-right" />
+      <div className="toolbar-right">
+        {docInfo && (
+          <button
+            className={`toolbar-btn ${sidebarOpen ? "active" : ""}`}
+            onClick={onToggleSidebar}
+            title="Toggle sidebar"
+          >
+            &#9776;
+          </button>
+        )}
+      </div>
     </header>
   );
 }
