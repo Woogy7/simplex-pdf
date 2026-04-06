@@ -78,13 +78,6 @@ export async function searchText(
   return invoke("search_text", { query, caseSensitive, wholeWord });
 }
 
-export interface AnnotationRect {
-  left: number;
-  top: number;
-  right: number;
-  bottom: number;
-}
-
 export interface AnnotationColor {
   r: number;
   g: number;
@@ -92,42 +85,23 @@ export interface AnnotationColor {
   a: number;
 }
 
-export interface InkPoint {
-  x: number;
-  y: number;
+/** Data sent to the backend when saving annotations. */
+export interface AnnotationData {
+  pageIndex: number;
+  annotationType: string;
+  rect: { left: number; top: number; right: number; bottom: number };
+  color: AnnotationColor;
+  content?: string;
 }
 
-/** Adds a markup annotation (highlight, underline, strikeout). */
-export async function addMarkup(
-  pageIndex: number,
-  annotationType: string,
-  rect: AnnotationRect,
-  color: AnnotationColor,
+/** Writes all annotations to the PDF and saves to disk. */
+export async function saveWithAnnotations(
+  annotations: AnnotationData[],
 ): Promise<void> {
-  return invoke("add_markup", { pageIndex, annotationType, rect, color });
+  return invoke("save_with_annotations", { annotations });
 }
 
-/** Adds a text note (sticky note) annotation. */
-export async function addNote(
-  pageIndex: number,
-  rect: AnnotationRect,
-  content: string,
-  color: AnnotationColor,
-): Promise<void> {
-  return invoke("add_note", { pageIndex, rect, content, color });
-}
-
-/** Adds an ink (freehand drawing) annotation. */
-export async function addInk(
-  pageIndex: number,
-  points: InkPoint[],
-  color: AnnotationColor,
-  width: number,
-): Promise<void> {
-  return invoke("add_ink", { pageIndex, points, color, width });
-}
-
-/** Saves the current PDF to disk. */
+/** Saves the current PDF to disk without new annotations. */
 export async function savePdf(): Promise<void> {
   return invoke("save_pdf");
 }

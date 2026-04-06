@@ -33,9 +33,7 @@ pub fn run() {
             commands::file::render_page,
             commands::file::get_page_dimensions,
             commands::search::search_text,
-            commands::annotate::add_markup,
-            commands::annotate::add_note,
-            commands::annotate::add_ink,
+            commands::annotate::save_with_annotations,
             commands::annotate::save_pdf,
         ])
         .run(tauri::generate_context!())

@@ -50,78 +50,78 @@ You need PDF files to test with. Some options:
 ## Test Checklist
 
 ### App Launch & Empty State
-- [ ] App opens without errors
-- [ ] Empty state shows "Simplex PDF" title and "Open File" button
-- [ ] Theme toggle button is visible (shows "Dark", "Light", or "Auto")
+- [x] App opens without errors
+- [x] Empty state shows "Simplex PDF" title and "Open File" button
+- [x] Theme toggle button is visible (shows "Dark", "Light", or "Auto")
 
 ### File Opening
-- [ ] Click "Open" button — native file picker appears
-- [ ] Select a PDF — document loads, pages appear
-- [ ] Toolbar shows filename or document title
-- [ ] Page count shows correctly (e.g. "1 / 5")
-- [ ] Cancel file picker — nothing crashes
+- [x] Click "Open" button — native file picker appears
+- [x] Select a PDF — document loads, pages appear
+- [x] Toolbar shows filename or document title
+- [x] Page count shows correctly (e.g. "1 / 5")
+- [x] Cancel file picker — nothing crashes
 
 ### Page Navigation
-- [ ] Click right arrow — goes to next page
-- [ ] Click left arrow — goes to previous page
-- [ ] Left arrow disabled on page 1
-- [ ] Right arrow disabled on last page
-- [ ] Type a page number in the input — jumps to that page
-- [ ] Arrow keys (Left/Right or Up/Down) navigate pages
-- [ ] Home key — jumps to first page
-- [ ] End key — jumps to last page
-- [ ] PageUp/PageDown — jumps by 10 pages
+- [x] Click right arrow — goes to next page
+- [x] Click left arrow — goes to previous page
+- [x] Left arrow disabled on page 1
+- [x] Right arrow disabled on last page
+- [x] Type a page number in the input — jumps to that page - ⚠️ doesn't work at all.
+- [x] Arrow keys (Left/Right or Up/Down) navigate pages
+- [x] Home key — jumps to first page
+- [x] End key — jumps to last page
+- [x] PageUp/PageDown — jumps by 10 pages - ⚠️ change to 1 page, same as adobe.
 
 ### Continuous Scroll
-- [ ] All pages render stacked vertically
-- [ ] Scroll down through the document smoothly
-- [ ] Page number in toolbar updates as you scroll
-- [ ] Only visible pages are rendered (check: scroll fast past many pages — no lag)
-- [ ] Pages that scroll out of view have their renders cached
+- [x] All pages render stacked vertically
+- [x] Scroll down through the document smoothly
+- [x] Page number in toolbar updates as you scroll
+- [x] Only visible pages are rendered (check: scroll fast past many pages — no lag)
+- [x] Pages that scroll out of view have their renders cached
 
 ### Zoom
-- [ ] Click "+" to zoom in — page gets bigger
-- [ ] Click "-" to zoom out — page gets smaller
-- [ ] Click the percentage label (e.g. "100%") — resets to 100%
-- [ ] Ctrl+= (Ctrl and equals key) zooms in
-- [ ] Ctrl+- zooms out
-- [ ] Ctrl+0 resets zoom
-- [ ] Zoom range: 25% to 400%
-- [ ] Pages re-render at new zoom level (should look crisp, not blurry)
+- [x] Click "+" to zoom in — page gets bigger
+- [x] Click "-" to zoom out — page gets smaller
+- [x] Click the percentage label (e.g. "100%") — resets to 100%
+- [x] Ctrl+= (Ctrl and equals key) zooms in
+- [x] Ctrl+- zooms out
+- [x] Ctrl+0 resets zoom
+- [x] Zoom range: 25% to 400%
+- [x] Pages re-render at new zoom level (should look crisp, not blurry) - ⚠️ looks blurry after multiple zooming in and out.
 
 ### Page Thumbnails Sidebar
-- [ ] Sidebar is visible on the left by default
-- [ ] Thumbnails show small versions of each page
-- [ ] Click a thumbnail — viewer scrolls to that page
-- [ ] Current page thumbnail is highlighted with blue border
-- [ ] Click the hamburger menu button (top-right) — sidebar toggles
-- [ ] Sidebar hidden — more space for the viewer
+- [x] Sidebar is visible on the left by default
+- [x] Thumbnails show small versions of each page
+- [x] Click a thumbnail — viewer scrolls to that page
+- [x] Current page thumbnail is highlighted with blue border
+- [x] Click the hamburger menu button (top-right) — sidebar toggles
+- [x] Sidebar hidden — more space for the viewer
 
 ### Text Search (Ctrl+F)
-- [ ] Press Ctrl+F — search bar appears below toolbar
-- [ ] Type a word — matches are highlighted on pages in yellow
-- [ ] Match count shows (e.g. "1 / 15")
-- [ ] Press Enter — jumps to next match (orange highlight)
-- [ ] Press Shift+Enter — jumps to previous match
-- [ ] Click up/down arrows in search bar — navigates matches
-- [ ] "Aa" button toggles case-sensitive search
-- [ ] "W" button toggles whole-word search
-- [ ] Press Escape — search bar closes, highlights removed
-- [ ] Search for a word that doesn't exist — shows "No results"
-- [ ] Search button in toolbar also opens search
+- [x] Press Ctrl+F — search bar appears below toolbar - ⚠️ mine worked with ctrl + shift + f.
+- [x] Type a word — matches are highlighted on pages in yellow
+- [x] Match count shows (e.g. "1 / 15")
+- [x] Press Enter — jumps to next match (orange highlight)
+- [x] Press Shift+Enter — jumps to previous match - ⚠️ doesn't work 
+- [x] Click up/down arrows in search bar — navigates matches
+- [x] "Aa" button toggles case-sensitive search
+- [x] "W" button toggles whole-word search
+- [x] Press Escape — search bar closes, highlights removed
+- [x] Search for a word that doesn't exist — shows "No results"
+- [x] Search button in toolbar also opens search
 
 ### Annotations — Highlight
-- [ ] Click "H" button in toolbar — enters highlight mode
-- [ ] Cursor changes to crosshair
-- [ ] Click and drag on a page — yellow preview rectangle appears
-- [ ] Release mouse — highlight annotation is created
+- [x] Click "H" button in toolbar — enters highlight mode
+- [x] Cursor changes to crosshair
+- [x] Click and drag on a page — yellow preview rectangle appears
+- [ ] Release mouse — highlight annotation is created - ⚠️ I don't think this works? I release the mouse, the screen flashes, and then the yellow square disappears. is that the intended behavior?
 - [ ] Page re-renders showing the highlight
-- [ ] "H" button is highlighted when in highlight mode
-- [ ] Click "H" again — exits highlight mode
-- [ ] Escape key — exits annotation mode
+- [x] "H" button is highlighted when in highlight mode
+- [x] Click "H" again — exits highlight mode
+- [x] Escape key — exits annotation mode
 
 ### Annotations — Underline & Strikeout
-- [ ] Click "U" — enter underline mode, drag to create underline annotation
+- [ ] Click "U" — enter underline mode, drag to create underline annotation - ⚠️ this doesn't work, same behavior as the highlighting mode, see my note above.
 - [ ] Click "S" — enter strikeout mode, drag to create strikeout annotation
 - [ ] Both work the same as highlight but with different visual effect
 
@@ -144,11 +144,11 @@ You need PDF files to test with. Some options:
 - [ ] **WARNING**: Save overwrites the original file. Use a copy for testing!
 
 ### Dark Mode / Theme
-- [ ] Theme button shows "Dark" — click it, UI switches to dark mode
-- [ ] Click again — shows "Light", switches to light mode
-- [ ] Click again — shows "Auto", follows system preference
-- [ ] Dark mode: dark backgrounds, light text, readable toolbar
-- [ ] Light mode: white backgrounds, dark text
+- [x] Theme button shows "Dark" — click it, UI switches to dark mode
+- [x] Click again — shows "Light", switches to light mode
+- [x] Click again — shows "Auto", follows system preference
+- [x] Dark mode: dark backgrounds, light text, readable toolbar
+- [x] Light mode: white backgrounds, dark text
 
 ### Keyboard Shortcuts Summary
 | Shortcut | Action |
@@ -159,9 +159,9 @@ You need PDF files to test with. Some options:
 | Ctrl+= | Zoom in |
 | Ctrl+- | Zoom out |
 | Ctrl+0 | Reset zoom |
-| Arrow keys | Navigate pages |
+| Arrow keys | Scroll in pages |
 | Home / End | First / last page |
-| PageUp / PageDown | Jump 10 pages |
+| PageUp / PageDown | Navigate pages |
 | Escape | Close search / exit annotation mode |
 | Enter | Next search match |
 | Shift+Enter | Previous search match |

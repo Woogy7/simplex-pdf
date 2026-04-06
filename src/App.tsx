@@ -7,16 +7,28 @@ import {
   pickPdfFile,
   openFile,
   getPageDimensions,
-  savePdf,
+  saveWithAnnotations,
   type DocumentInfo,
   type PageDimensions,
   type SearchResults,
 } from "./lib/api";
+import type { Annotation } from "./lib/annotations";
 import "./styles/main.css";
 
 const MIN_ZOOM = 0.25;
 const MAX_ZOOM = 4.0;
 const ZOOM_STEP = 0.25;
+
+/** Convert a hex color to the backend's RGBA format. */
+function hexToRgba(hex: string, alpha: number) {
+  const h = hex.replace("#", "");
+  return {
+    r: parseInt(h.substring(0, 2), 16),
+    g: parseInt(h.substring(2, 4), 16),
+    b: parseInt(h.substring(4, 6), 16),
+    a: alpha,
+  };
+}
 
 function App() {
   const [docInfo, setDocInfo] = useState<DocumentInfo | null>(null);
@@ -25,16 +37,14 @@ function App() {
   const [zoom, setZoom] = useState(1.0);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [searchOpen, setSearchOpen] = useState(false);
-  const [searchResults, setSearchResults] = useState<SearchResults | null>(
-    null,
-  );
+  const [searchResults, setSearchResults] = useState<SearchResults | null>(null);
   const [currentMatchIndex, setCurrentMatchIndex] = useState(0);
   const [annotationMode, setAnnotationMode] = useState<AnnotationMode>(null);
   const [annotationColor, setAnnotationColor] = useState("#FFD500");
+  const [annotations, setAnnotations] = useState<Annotation[]>([]);
   const [theme, setTheme] = useState<"light" | "dark" | "system">("system");
   const [error, setError] = useState<string | null>(null);
 
-  // Apply theme to document root
   useEffect(() => {
     if (theme === "system") {
       document.documentElement.removeAttribute("data-theme");
@@ -48,7 +58,6 @@ function App() {
       setError(null);
       const path = await pickPdfFile();
       if (!path) return;
-
       const info = await openFile(path);
       const dims = await getPageDimensions();
       setDocInfo(info);
@@ -57,6 +66,7 @@ function App() {
       setZoom(1.0);
       setSearchResults(null);
       setAnnotationMode(null);
+      setAnnotations([]);
     } catch (err) {
       setError(String(err));
     }
@@ -65,10 +75,24 @@ function App() {
   const handleSave = useCallback(async () => {
     try {
       setError(null);
-      await savePdf();
+      // Convert frontend annotations to backend format and save
+      const annData = annotations.map((a) => ({
+        pageIndex: a.pageIndex,
+        annotationType: a.type,
+        rect: a.rect,
+        color: hexToRgba(a.color, a.type === "note" ? 255 : 128),
+        content: a.content,
+      }));
+      await saveWithAnnotations(annData);
+      // Clear frontend annotations after they've been written to the PDF
+      setAnnotations([]);
     } catch (err) {
       setError(String(err));
     }
+  }, [annotations]);
+
+  const handleAddAnnotation = useCallback((annotation: Annotation) => {
+    setAnnotations((prev) => [...prev, annotation]);
   }, []);
 
   const handlePageChange = useCallback(
@@ -117,85 +141,42 @@ function App() {
     setCurrentMatchIndex(0);
   }, []);
 
-  // Keyboard shortcuts
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       const ctrl = e.ctrlKey || e.metaKey;
 
-      // Ctrl+F — Tauri webview may report this as "f" or intercept it.
-      // Also handle Ctrl+Shift+F as fallback.
       if (ctrl && (e.key === "f" || e.key === "F") && docInfo) {
         e.preventDefault();
         setSearchOpen(true);
         return;
       }
-
       if (ctrl && e.key === "s" && docInfo) {
         e.preventDefault();
         handleSave();
         return;
       }
-
       if (e.key === "Escape") {
         setAnnotationMode(null);
         return;
       }
 
       if (!docInfo) return;
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
 
-      if (
-        e.target instanceof HTMLInputElement ||
-        e.target instanceof HTMLTextAreaElement
-      )
-        return;
-
-      if (ctrl && e.key === "=") {
-        e.preventDefault();
-        handleZoomIn();
-      } else if (ctrl && e.key === "-") {
-        e.preventDefault();
-        handleZoomOut();
-      } else if (ctrl && e.key === "0") {
-        e.preventDefault();
-        handleZoomReset();
-      } else if (ctrl && e.key === "o") {
-        e.preventDefault();
-        handleOpen();
-      } else if (
-        e.key === "ArrowLeft" ||
-        e.key === "ArrowRight" ||
-        e.key === "ArrowUp" ||
-        e.key === "ArrowDown"
-      ) {
-        // Let the browser handle all arrow keys for native scrolling
-        return;
-      } else if (e.key === "Home") {
-        e.preventDefault();
-        handlePageChange(0);
-      } else if (e.key === "End") {
-        e.preventDefault();
-        handlePageChange(docInfo.pageCount - 1);
-      } else if (e.key === "PageUp") {
-        e.preventDefault();
-        handlePageChange(currentPage - 1);
-      } else if (e.key === "PageDown") {
-        e.preventDefault();
-        handlePageChange(currentPage + 1);
-      }
+      if (ctrl && e.key === "=") { e.preventDefault(); handleZoomIn(); }
+      else if (ctrl && e.key === "-") { e.preventDefault(); handleZoomOut(); }
+      else if (ctrl && e.key === "0") { e.preventDefault(); handleZoomReset(); }
+      else if (ctrl && e.key === "o") { e.preventDefault(); handleOpen(); }
+      else if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(e.key)) { return; }
+      else if (e.key === "Home") { e.preventDefault(); handlePageChange(0); }
+      else if (e.key === "End") { e.preventDefault(); handlePageChange(docInfo.pageCount - 1); }
+      else if (e.key === "PageUp") { e.preventDefault(); handlePageChange(currentPage - 1); }
+      else if (e.key === "PageDown") { e.preventDefault(); handlePageChange(currentPage + 1); }
     };
 
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [
-    docInfo,
-    currentPage,
-    handleOpen,
-    handleSave,
-    handlePageChange,
-    handleZoomIn,
-    handleZoomOut,
-    handleZoomReset,
-  ]);
+  }, [docInfo, currentPage, handleOpen, handleSave, handlePageChange, handleZoomIn, handleZoomOut, handleZoomReset]);
 
   return (
     <div className="app-layout">
@@ -248,6 +229,8 @@ function App() {
               currentMatchIndex={currentMatchIndex}
               annotationMode={annotationMode}
               annotationColor={annotationColor}
+              annotations={annotations}
+              onAddAnnotation={handleAddAnnotation}
               onPageChange={handlePageChange}
             />
           </>
