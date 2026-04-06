@@ -32,6 +32,7 @@ pub fn run() {
             commands::file::get_document_info,
             commands::file::render_page,
             commands::file::get_page_dimensions,
+            commands::search::search_text,
         ])
         .run(tauri::generate_context!())
         .expect("failed to run simplex-pdf application");

@@ -11,6 +11,7 @@ interface ToolbarProps {
   onZoomOut: () => void;
   onZoomReset: () => void;
   onToggleSidebar: () => void;
+  onSearch: () => void;
 }
 
 export default function Toolbar({
@@ -24,6 +25,7 @@ export default function Toolbar({
   onZoomOut,
   onZoomReset,
   onToggleSidebar,
+  onSearch,
 }: ToolbarProps) {
   const pageCount = docInfo?.pageCount ?? 0;
 
@@ -103,13 +105,22 @@ export default function Toolbar({
 
       <div className="toolbar-right">
         {docInfo && (
-          <button
-            className={`toolbar-btn ${sidebarOpen ? "active" : ""}`}
-            onClick={onToggleSidebar}
-            title="Toggle sidebar"
-          >
-            &#9776;
-          </button>
+          <>
+            <button
+              className="toolbar-btn"
+              onClick={onSearch}
+              title="Search (Ctrl+F)"
+            >
+              Search
+            </button>
+            <button
+              className={`toolbar-btn ${sidebarOpen ? "active" : ""}`}
+              onClick={onToggleSidebar}
+              title="Toggle sidebar"
+            >
+              &#9776;
+            </button>
+          </>
         )}
       </div>
     </header>

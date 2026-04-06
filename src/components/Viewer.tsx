@@ -1,11 +1,17 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { renderPage, type PageDimensions } from "../lib/api";
+import {
+  renderPage,
+  type PageDimensions,
+  type SearchResults,
+} from "../lib/api";
 
 interface ViewerProps {
   currentPage: number;
   pageCount: number;
   dimensions: PageDimensions[];
   zoom: number;
+  searchResults: SearchResults | null;
+  currentMatchIndex: number;
   onPageChange: (page: number) => void;
 }
 
@@ -17,6 +23,8 @@ export default function Viewer({
   pageCount,
   dimensions,
   zoom,
+  searchResults,
+  currentMatchIndex,
   onPageChange,
 }: ViewerProps) {
   const [renderedPages, setRenderedPages] = useState<Map<number, string>>(
@@ -81,7 +89,6 @@ export default function Viewer({
     const el = pageRefs.current.get(currentPage);
     if (!el || !containerRef.current) return;
 
-    // Check if the target page is already mostly visible
     const container = containerRef.current;
     const rect = el.getBoundingClientRect();
     const containerRect = container.getBoundingClientRect();
@@ -92,7 +99,6 @@ export default function Viewer({
     if (!visible) {
       scrollingToRef.current = true;
       el.scrollIntoView({ behavior: "auto", block: "start" });
-      // Allow scroll event to settle before tracking again
       setTimeout(() => {
         scrollingToRef.current = false;
       }, 100);
@@ -116,7 +122,6 @@ export default function Viewer({
 
     const scale = zoom * 1.5;
     for (const pageIndex of toRender) {
-      // Check if already rendered at this scale
       if (renderedPages.has(pageIndex)) {
         const cached = renderedPages.get(pageIndex)!;
         if (cached.startsWith(`scale:${scale}:`)) continue;
@@ -148,13 +153,52 @@ export default function Viewer({
   const getImageUri = (pageIndex: number): string | null => {
     const entry = renderedPages.get(pageIndex);
     if (!entry) return null;
-    // Strip the scale prefix
     const colonIdx = entry.indexOf(":", 6);
     return colonIdx >= 0 ? entry.substring(colonIdx + 1) : null;
   };
 
+  // Get search match overlays for a specific page
+  const getMatchOverlays = (pageIndex: number, pageDim: PageDimensions) => {
+    if (!searchResults) return null;
+    const pageMatches = searchResults.matches.filter(
+      (m) => m.pageIndex === pageIndex,
+    );
+    if (pageMatches.length === 0) return null;
+
+    return searchResults.matches.map((match, gi) => {
+      if (match.pageIndex !== pageIndex) return null;
+      const isCurrent = gi === currentMatchIndex;
+
+      return match.rects.map((rect, ri) => {
+        // Convert PDF points (origin bottom-left) to CSS (origin top-left)
+        const scaleX = zoom / 1; // pageDim is already in points
+        const left = rect.left * scaleX;
+        const top = (pageDim.height - rect.top) * scaleX;
+        const width = (rect.right - rect.left) * scaleX;
+        const height = (rect.top - rect.bottom) * scaleX;
+
+        return (
+          <div
+            key={`${gi}-${ri}`}
+            className={`search-highlight ${isCurrent ? "current" : ""}`}
+            style={{
+              left,
+              top,
+              width,
+              height,
+            }}
+          />
+        );
+      });
+    });
+  };
+
   if (dimensions.length === 0) {
-    return <div className="viewer"><div className="viewer-loading">Loading...</div></div>;
+    return (
+      <div className="viewer">
+        <div className="viewer-loading">Loading...</div>
+      </div>
+    );
   }
 
   return (
@@ -162,7 +206,6 @@ export default function Viewer({
       <div className="viewer-pages">
         {dimensions.map((dim, index) => {
           const imageUri = getImageUri(index);
-          // Scale page dimensions to display size
           const displayWidth = dim.width * zoom;
           const displayHeight = dim.height * zoom;
 
@@ -193,6 +236,7 @@ export default function Viewer({
                   <span>{index + 1}</span>
                 </div>
               )}
+              {searchResults && getMatchOverlays(index, dim)}
             </div>
           );
         })}

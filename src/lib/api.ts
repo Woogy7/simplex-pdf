@@ -50,3 +50,30 @@ export async function renderPage(
 export async function getPageDimensions(): Promise<PageDimensions[]> {
   return invoke("get_page_dimensions");
 }
+
+export interface MatchRect {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+}
+
+export interface SearchMatch {
+  pageIndex: number;
+  rects: MatchRect[];
+}
+
+export interface SearchResults {
+  query: string;
+  totalMatches: number;
+  matches: SearchMatch[];
+}
+
+/** Searches the document for the given query. */
+export async function searchText(
+  query: string,
+  caseSensitive: boolean = false,
+  wholeWord: boolean = false,
+): Promise<SearchResults> {
+  return invoke("search_text", { query, caseSensitive, wholeWord });
+}

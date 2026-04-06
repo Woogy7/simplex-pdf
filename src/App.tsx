@@ -2,12 +2,14 @@ import { useState, useCallback, useEffect } from "react";
 import Toolbar from "./components/Toolbar";
 import Viewer from "./components/Viewer";
 import Sidebar from "./components/Sidebar";
+import SearchBar from "./components/SearchBar";
 import {
   pickPdfFile,
   openFile,
   getPageDimensions,
   type DocumentInfo,
   type PageDimensions,
+  type SearchResults,
 } from "./lib/api";
 import "./styles/main.css";
 
@@ -21,6 +23,11 @@ function App() {
   const [currentPage, setCurrentPage] = useState(0);
   const [zoom, setZoom] = useState(1.0);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchResults, setSearchResults] = useState<SearchResults | null>(
+    null,
+  );
+  const [currentMatchIndex, setCurrentMatchIndex] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
   const handleOpen = useCallback(async () => {
@@ -35,6 +42,7 @@ function App() {
       setDimensions(dims);
       setCurrentPage(0);
       setZoom(1.0);
+      setSearchResults(null);
     } catch (err) {
       setError(String(err));
     }
@@ -64,18 +72,40 @@ function App() {
     setSidebarOpen((s) => !s);
   }, []);
 
+  const handleSearchResults = useCallback(
+    (results: SearchResults | null, matchIndex: number) => {
+      setSearchResults(results);
+      setCurrentMatchIndex(matchIndex);
+    },
+    [],
+  );
+
+  const handleSearchClose = useCallback(() => {
+    setSearchOpen(false);
+    setSearchResults(null);
+    setCurrentMatchIndex(0);
+  }, []);
+
   // Keyboard shortcuts
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
+      const ctrl = e.ctrlKey || e.metaKey;
+
+      // Ctrl+F always works (even without a doc)
+      if (ctrl && e.key === "f" && docInfo) {
+        e.preventDefault();
+        setSearchOpen(true);
+        return;
+      }
+
       if (!docInfo) return;
 
+      // Don't capture nav keys when typing in search input
       if (
         e.target instanceof HTMLInputElement ||
         e.target instanceof HTMLTextAreaElement
       )
         return;
-
-      const ctrl = e.ctrlKey || e.metaKey;
 
       if (ctrl && e.key === "=") {
         e.preventDefault();
@@ -135,7 +165,16 @@ function App() {
         onZoomOut={handleZoomOut}
         onZoomReset={handleZoomReset}
         onToggleSidebar={toggleSidebar}
+        onSearch={() => setSearchOpen(true)}
       />
+      {searchOpen && (
+        <SearchBar
+          visible={searchOpen}
+          onClose={handleSearchClose}
+          onResults={handleSearchResults}
+          onNavigate={handlePageChange}
+        />
+      )}
       <div className="main-content">
         {error && <div className="error-banner">{error}</div>}
         {docInfo ? (
@@ -153,6 +192,8 @@ function App() {
               pageCount={docInfo.pageCount}
               dimensions={dimensions}
               zoom={zoom}
+              searchResults={searchResults}
+              currentMatchIndex={currentMatchIndex}
               onPageChange={handlePageChange}
             />
           </>
