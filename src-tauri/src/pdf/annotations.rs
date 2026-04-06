@@ -97,27 +97,34 @@ pub fn add_markup_annotation(
     let pdf_rect = to_pdf_rect(rect);
     let quad_points = PdfQuadPoints::from_rect(&pdf_rect);
 
+    // Helper: configure a markup annotation with bounds, color, and quad points.
+    // PDFium requires all three for correct rendering:
+    // - set_bounds: the /Rect entry (annotation rectangle)
+    // - set_stroke_color: the /C entry (annotation color used for rendering)
+    // - attachment points: the /QuadPoints entry (precise highlight region)
+    macro_rules! configure_markup {
+        ($ann:expr) => {{
+            $ann.set_bounds(pdf_rect)?;
+            $ann.set_stroke_color(pdf_color)?;
+            // Fill color also set for highlight visibility in some renderers
+            let _ = $ann.set_fill_color(pdf_color);
+            $ann.attachment_points_mut()
+                .create_attachment_point_at_end(quad_points)?;
+        }};
+    }
+
     match annotation_type {
         "highlight" => {
             let mut ann = annotations.create_highlight_annotation()?;
-            ann.set_position(pdf_rect.left(), pdf_rect.bottom())?;
-            ann.set_stroke_color(pdf_color)?;
-            ann.attachment_points_mut()
-                .create_attachment_point_at_end(quad_points)?;
+            configure_markup!(ann);
         }
         "underline" => {
             let mut ann = annotations.create_underline_annotation()?;
-            ann.set_position(pdf_rect.left(), pdf_rect.bottom())?;
-            ann.set_stroke_color(pdf_color)?;
-            ann.attachment_points_mut()
-                .create_attachment_point_at_end(quad_points)?;
+            configure_markup!(ann);
         }
         "strikeout" => {
             let mut ann = annotations.create_strikeout_annotation()?;
-            ann.set_position(pdf_rect.left(), pdf_rect.bottom())?;
-            ann.set_stroke_color(pdf_color)?;
-            ann.attachment_points_mut()
-                .create_attachment_point_at_end(quad_points)?;
+            configure_markup!(ann);
         }
         other => {
             return Err(AppError::Other(format!("Unknown annotation type: {other}")));
