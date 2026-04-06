@@ -144,6 +144,62 @@ export default function Viewer({
     }
   }, [currentPage]);
 
+  // Scroll to current search match within the page
+  useEffect(() => {
+    if (!searchResults || searchResults.matches.length === 0) return;
+    const match = searchResults.matches[currentMatchIndex];
+    if (!match) return;
+
+    const pageEl = pageRefs.current.get(match.pageIndex);
+    const container = containerRef.current;
+    if (!pageEl || !container) return;
+
+    // Wait a tick for the page scroll to finish, then scroll to the match
+    setTimeout(() => {
+      const pageRect = pageEl.getBoundingClientRect();
+      const containerRect = container.getBoundingClientRect();
+      const dim = dimensions[match.pageIndex];
+      if (!dim) return;
+
+      // Convert first match rect from PDF coords to pixel offset within the page
+      const firstRect = match.rects[0];
+      if (!firstRect) return;
+
+      const matchTopPx = (dim.height - firstRect.top) * zoom;
+      const matchLeftPx = firstRect.left * zoom;
+
+      // Absolute position of the match in the viewport
+      const matchAbsTop = pageRect.top + matchTopPx;
+      const matchAbsLeft = pageRect.left + matchLeftPx;
+
+      // Check if match is visible in the container viewport
+      const isVisible =
+        matchAbsTop >= containerRect.top &&
+        matchAbsTop <= containerRect.bottom - 40 &&
+        matchAbsLeft >= containerRect.left &&
+        matchAbsLeft <= containerRect.right - 40;
+
+      if (!isVisible) {
+        scrollingToRef.current = true;
+        // Scroll so the match is roughly centered
+        container.scrollTo({
+          top:
+            container.scrollTop +
+            (matchAbsTop - containerRect.top) -
+            containerRect.height / 3,
+          left:
+            container.scrollLeft +
+            (matchAbsLeft - containerRect.left) -
+            containerRect.width / 3,
+          behavior: "auto",
+        });
+        setTimeout(() => {
+          scrollingToRef.current = false;
+        }, 300);
+      }
+    }, 50);
+  }, [searchResults, currentMatchIndex, zoom, dimensions]);
+
   // Render visible pages + buffer
   // NOTE: renderedPages is NOT in the dependency array to avoid render cascades.
   // We use renderingRef to track in-flight requests instead.
