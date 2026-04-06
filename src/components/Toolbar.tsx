@@ -32,6 +32,8 @@ interface ToolbarProps {
   onAnnotationMode: (mode: AnnotationMode) => void;
   onAnnotationColor: (color: string) => void;
   onSave: () => void;
+  theme: "light" | "dark" | "system";
+  onToggleTheme: () => void;
 }
 
 export default function Toolbar({
@@ -51,6 +53,8 @@ export default function Toolbar({
   onAnnotationMode,
   onAnnotationColor,
   onSave,
+  theme,
+  onToggleTheme,
 }: ToolbarProps) {
   const pageCount = docInfo?.pageCount ?? 0;
 
@@ -191,6 +195,13 @@ export default function Toolbar({
             </button>
           </>
         )}
+        <button
+          className="toolbar-btn"
+          onClick={onToggleTheme}
+          title={`Theme: ${theme}`}
+        >
+          {theme === "dark" ? "Light" : theme === "light" ? "Dark" : "Auto"}
+        </button>
       </div>
     </header>
   );

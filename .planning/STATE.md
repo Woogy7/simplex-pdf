@@ -1,11 +1,10 @@
 # Workflow State
 
 ## Current Phase
-Phase 1 — Milestone 3: Text Search
+Phase 1 COMPLETE
 
 ## Status
-M1 + M2 complete. App has full PDF viewing with zoom, continuous scroll,
-keyboard navigation, and page thumbnails sidebar.
+All Phase 1 milestones complete. Ready for manual testing and alpha release.
 
 ## Last Updated
 2026-04-06
@@ -13,11 +12,14 @@ keyboard navigation, and page thumbnails sidebar.
 ## Completed
 - M1: PDF loading & rendering (pdfium-render, Tauri commands, Viewer component)
 - M2: Navigation & viewing (zoom, keyboard shortcuts, continuous scroll, thumbnails sidebar)
+- M3: Text search with match highlighting and navigation
+- M4: Basic annotations (highlight, underline, strikeout, sticky notes, save to PDF)
+- M5: Dark mode toggle, keyboard shortcut polish, manual testing checklist
 
 ## Deferred
 - View mode selector (single page / two-page) — continuous scroll is default
+- Ink annotation strokes (pdfium-render doesn't expose safe FPDFAnnot_AddInkStroke yet)
+- Freehand drawing tool (depends on ink stroke API)
 
-## Next Steps
-- M3: Text search within PDF
-- M4: Basic annotations
-- M5: Polish & first alpha release
+## Next Phase
+- Phase 2: Form filling, smart field library, saved signatures

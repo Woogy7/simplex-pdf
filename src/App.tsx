@@ -31,7 +31,17 @@ function App() {
   const [currentMatchIndex, setCurrentMatchIndex] = useState(0);
   const [annotationMode, setAnnotationMode] = useState<AnnotationMode>(null);
   const [annotationColor, setAnnotationColor] = useState("#FFD500");
+  const [theme, setTheme] = useState<"light" | "dark" | "system">("system");
   const [error, setError] = useState<string | null>(null);
+
+  // Apply theme to document root
+  useEffect(() => {
+    if (theme === "system") {
+      document.documentElement.removeAttribute("data-theme");
+    } else {
+      document.documentElement.setAttribute("data-theme", theme);
+    }
+  }, [theme]);
 
   const handleOpen = useCallback(async () => {
     try {
@@ -83,6 +93,14 @@ function App() {
 
   const toggleSidebar = useCallback(() => {
     setSidebarOpen((s) => !s);
+  }, []);
+
+  const toggleTheme = useCallback(() => {
+    setTheme((t) => {
+      if (t === "system") return "dark";
+      if (t === "dark") return "light";
+      return "system";
+    });
   }, []);
 
   const handleSearchResults = useCallback(
@@ -194,6 +212,8 @@ function App() {
         onAnnotationMode={setAnnotationMode}
         onAnnotationColor={setAnnotationColor}
         onSave={handleSave}
+        theme={theme}
+        onToggleTheme={toggleTheme}
       />
       {searchOpen && (
         <SearchBar
