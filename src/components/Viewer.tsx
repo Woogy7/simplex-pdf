@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { renderPage, type PageDimensions, type SearchResults } from "../lib/api";
 import type { Annotation } from "../lib/annotations";
-import { createAnnotation } from "../lib/annotations";
+import { createAnnotation, createInkAnnotation } from "../lib/annotations";
 import type { AnnotationMode } from "./Toolbar";
 
 interface ViewerProps {
@@ -39,7 +39,7 @@ export default function Viewer({
   currentMatchIndex,
   annotationMode,
   annotationColor,
-  strokeWidth: _strokeWidth,
+  strokeWidth,
   annotations,
   onAddAnnotation,
   onPageChange,
@@ -49,7 +49,9 @@ export default function Viewer({
   );
   const [visiblePages, setVisiblePages] = useState<Set<number>>(new Set([0]));
   const [drag, setDrag] = useState<DragState | null>(null);
+  const [inkDrag, setInkDrag] = useState<{ pageIndex: number; points: { x: number; y: number }[] } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const inkPointsRef = useRef<{ x: number; y: number }[]>([]);
   const pageRefs = useRef<Map<number, HTMLDivElement>>(new Map());
   const scrollingToRef = useRef(false);
   const renderingRef = useRef<Set<string>>(new Set());
@@ -202,16 +204,44 @@ export default function Viewer({
   const handleMouseDown = (e: React.MouseEvent, pageIndex: number, pageEl: HTMLDivElement) => {
     if (!annotationMode) return;
     const pos = mouseToPdf(e, pageIndex, pageEl);
+
+    if (annotationMode === "ink") {
+      const firstPoint = { x: pos.x, y: pos.y };
+      inkPointsRef.current = [firstPoint];
+      setInkDrag({ pageIndex, points: [firstPoint] });
+      return;
+    }
+
     setDrag({ pageIndex, startX: pos.x, startY: pos.y, currentX: pos.x, currentY: pos.y });
   };
 
   const handleMouseMove = (e: React.MouseEvent, pageIndex: number, pageEl: HTMLDivElement) => {
+    if (inkDrag && inkDrag.pageIndex === pageIndex) {
+      const pos = mouseToPdf(e, pageIndex, pageEl);
+      inkPointsRef.current.push({ x: pos.x, y: pos.y });
+      // Update state every 3rd point to limit re-renders while keeping preview smooth
+      if (inkPointsRef.current.length % 3 === 0) {
+        setInkDrag({ pageIndex, points: [...inkPointsRef.current] });
+      }
+      return;
+    }
+
     if (!drag || drag.pageIndex !== pageIndex) return;
     const pos = mouseToPdf(e, pageIndex, pageEl);
     setDrag((d) => (d ? { ...d, currentX: pos.x, currentY: pos.y } : null));
   };
 
   const handleMouseUp = () => {
+    if (inkDrag) {
+      const finalPoints = inkPointsRef.current;
+      if (finalPoints.length >= 2) {
+        onAddAnnotation(createInkAnnotation(inkDrag.pageIndex, finalPoints, annotationColor, strokeWidth));
+      }
+      setInkDrag(null);
+      inkPointsRef.current = [];
+      return;
+    }
+
     if (!drag || !annotationMode) {
       setDrag(null);
       return;
@@ -342,6 +372,77 @@ export default function Viewer({
     );
   };
 
+  const getInkOverlays = (pageIndex: number, pageDim: PageDimensions) => {
+    const inkAnnotations = annotations.filter(
+      (a) => a.pageIndex === pageIndex && a.type === "ink" && a.inkStroke,
+    );
+    if (inkAnnotations.length === 0) return null;
+
+    return (
+      <svg
+        className="ink-overlay"
+        style={{
+          width: pageDim.width * zoom,
+          height: pageDim.height * zoom,
+        }}
+        viewBox={`0 0 ${pageDim.width} ${pageDim.height}`}
+      >
+        {inkAnnotations.map((ann) => {
+          const points = ann.inkStroke!.points;
+          const d = points
+            .map((p, i) => {
+              const svgY = pageDim.height - p.y;
+              return `${i === 0 ? "M" : "L"} ${p.x} ${svgY}`;
+            })
+            .join(" ");
+          return (
+            <path
+              key={ann.id}
+              d={d}
+              stroke={ann.color}
+              strokeWidth={ann.inkStroke!.strokeWidth}
+              fill="none"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          );
+        })}
+      </svg>
+    );
+  };
+
+  const getInkDragPreview = (pageIndex: number, pageDim: PageDimensions) => {
+    if (!inkDrag || inkDrag.pageIndex !== pageIndex || inkDrag.points.length < 2) return null;
+
+    const d = inkDrag.points
+      .map((p, i) => {
+        const svgY = pageDim.height - p.y;
+        return `${i === 0 ? "M" : "L"} ${p.x} ${svgY}`;
+      })
+      .join(" ");
+
+    return (
+      <svg
+        className="ink-overlay"
+        style={{
+          width: pageDim.width * zoom,
+          height: pageDim.height * zoom,
+        }}
+        viewBox={`0 0 ${pageDim.width} ${pageDim.height}`}
+      >
+        <path
+          d={d}
+          stroke={annotationColor}
+          strokeWidth={strokeWidth}
+          fill="none"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          opacity={0.7}
+        />
+      </svg>
+    );
+  };
+
   const getMatchOverlays = (pageIndex: number, pageDim: PageDimensions) => {
     if (!searchResults) return null;
     return searchResults.matches.map((match, gi) => {
@@ -392,6 +493,8 @@ export default function Viewer({
                 <div className="viewer-page-placeholder"><span>{index + 1}</span></div>
               )}
               {getAnnotationOverlays(index, dim)}
+              {getInkOverlays(index, dim)}
+              {getInkDragPreview(index, dim)}
               {searchResults && getMatchOverlays(index, dim)}
               {getDragOverlay(index, dim)}
             </div>
