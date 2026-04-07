@@ -9,9 +9,13 @@ import {
   getPageDimensions,
   getAnnotations,
   saveWithAnnotations,
+  getFormFields,
+  setFormFieldValues,
   type DocumentInfo,
   type PageDimensions,
   type SearchResults,
+  type FormFieldInfo,
+  type FormFieldUpdate,
 } from "./lib/api";
 import type { Annotation } from "./lib/annotations";
 import { createAnnotation, createInkAnnotation } from "./lib/annotations";
@@ -45,6 +49,8 @@ function App() {
   const [annotationColor, setAnnotationColor] = useState("#FFD500");
   const [strokeWidth, setStrokeWidth] = useState(2);
   const [annotations, setAnnotations] = useState<Annotation[]>([]);
+  const [formFields, setFormFields] = useState<FormFieldInfo[]>([]);
+  const [formUpdates, setFormUpdates] = useState<Map<string, FormFieldUpdate>>(new Map());
   const [theme, setTheme] = useState<"light" | "dark" | "system">("system");
   const [error, setError] = useState<string | null>(null);
 
@@ -88,6 +94,13 @@ function App() {
       } catch (err) {
         console.warn("Could not load existing annotations:", err);
       }
+      // Load form fields (non-fatal — PDF may not have forms)
+      let loadedFields: FormFieldInfo[] = [];
+      try {
+        loadedFields = await getFormFields();
+      } catch (err) {
+        console.warn("Could not load form fields:", err);
+      }
       setDocInfo(info);
       setDimensions(dims);
       setCurrentPage(0);
@@ -95,6 +108,8 @@ function App() {
       setSearchResults(null);
       setAnnotationMode(null);
       setAnnotations(loadedAnns);
+      setFormFields(loadedFields);
+      setFormUpdates(new Map());
     } catch (err) {
       setError(String(err));
     }
@@ -117,13 +132,33 @@ function App() {
       }));
       await saveWithAnnotations(annData);
       // Keep annotations visible — they're now in the PDF AND shown as overlays.
+      // Save form field updates if any
+      if (formUpdates.size > 0) {
+        await setFormFieldValues(Array.from(formUpdates.values()));
+        setFormUpdates(new Map());
+      }
     } catch (err) {
       setError(String(err));
     }
-  }, [annotations]);
+  }, [annotations, formUpdates]);
 
   const handleAddAnnotation = useCallback((annotation: Annotation) => {
     setAnnotations((prev) => [...prev, annotation]);
+  }, []);
+
+  const handleFormFieldChange = useCallback((pageIndex: number, fieldIndex: number, value: string | null, isChecked: boolean | null) => {
+    const key = `${pageIndex}:${fieldIndex}`;
+    setFormUpdates(prev => {
+      const next = new Map(prev);
+      next.set(key, { pageIndex, fieldIndex, value, isChecked });
+      return next;
+    });
+    // Update local state for immediate visual feedback
+    setFormFields(prev => prev.map(f =>
+      f.pageIndex === pageIndex && f.fieldIndex === fieldIndex
+        ? { ...f, value: value ?? f.value, isChecked: isChecked ?? f.isChecked }
+        : f
+    ));
   }, []);
 
   const handlePageChange = useCallback(
@@ -193,7 +228,7 @@ function App() {
       }
 
       if (!docInfo) return;
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLSelectElement) return;
 
       if (ctrl && e.key === "=") { e.preventDefault(); handleZoomIn(); }
       else if (ctrl && e.key === "-") { e.preventDefault(); handleZoomOut(); }
@@ -266,6 +301,8 @@ function App() {
               annotations={annotations}
               onAddAnnotation={handleAddAnnotation}
               onPageChange={handlePageChange}
+              formFields={formFields}
+              onFormFieldChange={handleFormFieldChange}
             />
           </>
         ) : (

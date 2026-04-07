@@ -131,3 +131,40 @@ export async function saveWithAnnotations(
 export async function savePdf(): Promise<void> {
   return invoke("save_pdf");
 }
+
+// --- Form Fields ---
+
+export interface FormFieldInfo {
+  pageIndex: number;
+  fieldIndex: number;
+  fieldType: "text" | "checkbox" | "radio" | "combobox" | "listbox" | "pushbutton" | "signature" | "unknown";
+  name: string | null;
+  value: string | null;
+  isChecked: boolean | null;
+  isReadOnly: boolean;
+  isRequired: boolean;
+  rect: { left: number; top: number; right: number; bottom: number };
+  options: { label: string | null; isSelected: boolean }[] | null;
+}
+
+export interface FormFieldUpdate {
+  pageIndex: number;
+  fieldIndex: number;
+  value?: string | null;
+  isChecked?: boolean | null;
+}
+
+/** Returns all form fields in the currently open document. */
+export async function getFormFields(): Promise<FormFieldInfo[]> {
+  return invoke("get_form_fields");
+}
+
+/** Returns whether the currently open document has a form. */
+export async function hasForm(): Promise<boolean> {
+  return invoke("has_form");
+}
+
+/** Saves form field value updates to the PDF. */
+export async function setFormFieldValues(updates: FormFieldUpdate[]): Promise<void> {
+  return invoke("set_form_field_values", { updates });
+}

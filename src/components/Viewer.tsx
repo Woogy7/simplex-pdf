@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { renderPage, type PageDimensions, type SearchResults } from "../lib/api";
+import { renderPage, type PageDimensions, type SearchResults, type FormFieldInfo } from "../lib/api";
 import type { Annotation } from "../lib/annotations";
 import { createAnnotation, createInkAnnotation } from "../lib/annotations";
 import type { AnnotationMode } from "./Toolbar";
+import { FormFiller } from "./FormFiller";
 
 interface ViewerProps {
   currentPage: number;
@@ -17,6 +18,8 @@ interface ViewerProps {
   annotations: Annotation[];
   onAddAnnotation: (annotation: Annotation) => void;
   onPageChange: (page: number) => void;
+  formFields: FormFieldInfo[];
+  onFormFieldChange: (pageIndex: number, fieldIndex: number, value: string | null, isChecked: boolean | null) => void;
 }
 
 const PAGE_GAP = 16;
@@ -43,6 +46,8 @@ export default function Viewer({
   annotations,
   onAddAnnotation,
   onPageChange,
+  formFields,
+  onFormFieldChange,
 }: ViewerProps) {
   const [renderedPages, setRenderedPages] = useState<Map<number, string>>(
     new Map(),
@@ -497,6 +502,15 @@ export default function Viewer({
               {getInkDragPreview(index, dim)}
               {searchResults && getMatchOverlays(index, dim)}
               {getDragOverlay(index, dim)}
+              {formFields.some(f => f.pageIndex === index) && (
+                <FormFiller
+                  fields={formFields.filter(f => f.pageIndex === index)}
+                  pageDimensions={dim}
+                  zoom={zoom}
+                  annotationMode={annotationMode}
+                  onFieldChange={onFormFieldChange}
+                />
+              )}
             </div>
           );
         })}
