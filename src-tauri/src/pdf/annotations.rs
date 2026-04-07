@@ -1,7 +1,8 @@
 //! Annotation creation and management.
 //!
 //! Uses `PDFium` to add, read, and modify annotations on PDF pages.
-//! Supports highlight, underline, strikeout, and text (sticky note) types.
+//! Supports highlight, underline, strikeout, text (sticky note), and ink
+//! (freehand drawing) types.
 //!
 //! Color persistence: `PDFium`'s `FPDFAnnot_GetColor` segfaults on annotations
 //! we create, so we store the hex color in the annotation's `/Contents` field
@@ -54,13 +55,32 @@ impl AnnotationColor {
     }
 }
 
+/// A single point in a freehand stroke, in PDF coordinate space.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StrokePoint {
+    /// X coordinate in PDF points.
+    pub x: f32,
+    /// Y coordinate in PDF points.
+    pub y: f32,
+}
+
+/// Data for a freehand ink stroke annotation.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct InkStrokeData {
+    /// Ordered points forming the stroke path.
+    pub points: Vec<StrokePoint>,
+    /// Stroke line width in PDF points.
+    pub stroke_width: f32,
+}
+
 /// A single annotation to persist to the PDF, received from the frontend.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AnnotationData {
     /// Zero-based page index.
     pub page_index: i32,
-    /// Annotation type: "highlight", "underline", "strikeout", or "note".
+    /// Annotation type: "highlight", "underline", "strikeout", "note", or "ink".
     pub annotation_type: String,
     /// Bounding rectangle in PDF points.
     pub rect: AnnotationRect,
@@ -68,6 +88,8 @@ pub struct AnnotationData {
     pub color: AnnotationColor,
     /// Text content (for notes).
     pub content: Option<String>,
+    /// Ink stroke data (only for `"ink"` annotation type).
+    pub ink_stroke: Option<InkStrokeData>,
 }
 
 /// Converts an [`AnnotationRect`] to a [`PdfRect`].
@@ -105,6 +127,39 @@ fn decode_contents(contents: &str) -> Option<(String, Option<String>)> {
     } else {
         Some((rest.to_string(), None))
     }
+}
+
+/// Encodes ink annotation metadata into the `/Contents` field.
+///
+/// Format: `simplex:#RRGGBB|ink:{"points":[...],"strokeWidth":2.0}`
+fn encode_ink_contents(color: &AnnotationColor, stroke_data: &InkStrokeData) -> String {
+    let hex = format!("#{:02X}{:02X}{:02X}", color.r, color.g, color.b);
+    let json = serde_json::to_string(stroke_data).unwrap_or_default();
+    format!("{COLOR_PREFIX}{hex}{COLOR_SEP}ink:{json}")
+}
+
+/// Decodes ink stroke data from the text portion of a `/Contents` string.
+///
+/// Returns `Some(InkStrokeData)` if the text starts with `ink:` and contains
+/// valid JSON; `None` otherwise.
+fn decode_ink_contents(text: &str) -> Option<InkStrokeData> {
+    let json = text.strip_prefix("ink:")?;
+    serde_json::from_str(json).ok()
+}
+
+/// Computes the bounding rectangle for a set of stroke points.
+fn compute_stroke_bounds(points: &[StrokePoint]) -> PdfRect {
+    let mut min_x = f32::MAX;
+    let mut min_y = f32::MAX;
+    let mut max_x = f32::MIN;
+    let mut max_y = f32::MIN;
+    for p in points {
+        min_x = min_x.min(p.x);
+        min_y = min_y.min(p.y);
+        max_x = max_x.max(p.x);
+        max_y = max_y.max(p.y);
+    }
+    PdfRect::new_from_values(min_y, min_x, max_y, max_x)
 }
 
 /// Default color for annotation types from other editors.
@@ -186,6 +241,31 @@ pub fn save_annotations_and_write(
                     created.set_bounds(pdf_rect)?;
                     created.set_fill_color(to_pdf_color(&ann.color))?;
                 }
+                "ink" => {
+                    if let Some(ref stroke_data) = ann.ink_stroke {
+                        if stroke_data.points.len() >= 2 {
+                            let mut ink_ann = ann_collection.create_ink_annotation()?;
+                            let bounds = compute_stroke_bounds(&stroke_data.points);
+                            ink_ann.set_bounds(bounds)?;
+                            ink_ann.set_stroke_color(pdf_color)?;
+                            let contents = encode_ink_contents(&ann.color, stroke_data);
+                            let _ = ink_ann.set_contents(&contents);
+
+                            let objects = ink_ann.objects_mut();
+                            let width = PdfPoints::new(stroke_data.stroke_width);
+                            for pair in stroke_data.points.windows(2) {
+                                objects.create_path_object_line(
+                                    PdfPoints::new(pair[0].x),
+                                    PdfPoints::new(pair[0].y),
+                                    PdfPoints::new(pair[1].x),
+                                    PdfPoints::new(pair[1].y),
+                                    pdf_color,
+                                    width,
+                                )?;
+                            }
+                        }
+                    }
+                }
                 _ => {}
             }
         }
@@ -214,6 +294,8 @@ pub struct ExistingAnnotation {
     pub color: String,
     /// Text content (for text/note annotations).
     pub content: Option<String>,
+    /// Ink stroke data if this is an ink annotation we created.
+    pub ink_stroke: Option<InkStrokeData>,
 }
 
 /// Reads all supported annotations from the document.
@@ -249,6 +331,7 @@ pub fn read_all_annotations(document: &Document) -> Result<Vec<ExistingAnnotatio
                 PdfPageAnnotationType::Underline => "underline",
                 PdfPageAnnotationType::Strikeout => "strikeout",
                 PdfPageAnnotationType::Text => "note",
+                PdfPageAnnotationType::Ink => "ink",
                 _ => continue,
             };
 
@@ -258,16 +341,20 @@ pub fn read_all_annotations(document: &Document) -> Result<Vec<ExistingAnnotatio
 
             // Read /Contents and try to extract our color prefix.
             let raw_contents = annotation.contents();
-            let (color, content) = if let Some(ref raw) = raw_contents {
+            let (color, content, ink_stroke) = if let Some(ref raw) = raw_contents {
                 if let Some((hex, text)) = decode_contents(raw) {
-                    (hex, text)
+                    // Check if the text portion contains ink stroke data.
+                    let ink = text.as_deref().and_then(decode_ink_contents);
+                    // If ink data was found, don't expose the raw JSON as content.
+                    let display_text = if ink.is_some() { None } else { text };
+                    (hex, display_text, ink)
                 } else {
                     // Annotation from another editor — use raw contents as text,
                     // default color.
-                    (default_color(type_name), raw_contents)
+                    (default_color(type_name), raw_contents, None)
                 }
             } else {
-                (default_color(type_name), None)
+                (default_color(type_name), None, None)
             };
 
             result.push(ExistingAnnotation {
@@ -281,6 +368,7 @@ pub fn read_all_annotations(document: &Document) -> Result<Vec<ExistingAnnotatio
                 },
                 color,
                 content,
+                ink_stroke,
             });
         }
     }
