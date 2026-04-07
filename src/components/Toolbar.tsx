@@ -45,6 +45,8 @@ interface ToolbarProps {
   onSave: () => void;
   theme: "light" | "dark" | "system";
   onToggleTheme: () => void;
+  fieldLibraryOpen: boolean;
+  onToggleFieldLibrary: () => void;
 }
 
 export default function Toolbar({
@@ -70,6 +72,8 @@ export default function Toolbar({
   onSave,
   theme,
   onToggleTheme,
+  fieldLibraryOpen,
+  onToggleFieldLibrary,
 }: ToolbarProps) {
   const pageCount = docInfo?.pageCount ?? 0;
 
@@ -260,6 +264,13 @@ export default function Toolbar({
               title="Search (Ctrl+F)"
             >
               Search
+            </button>
+            <button
+              className={`toolbar-btn ${fieldLibraryOpen ? "active" : ""}`}
+              onClick={onToggleFieldLibrary}
+              title="Toggle field library"
+            >
+              Library
             </button>
             <button
               className={`toolbar-btn ${sidebarOpen ? "active" : ""}`}

@@ -1,4 +1,6 @@
-import type { FormFieldInfo } from "../lib/api";
+import { useState, useRef, useCallback } from "react";
+import type { FormFieldInfo, FieldLibrary, FieldEntry } from "../lib/api";
+import { FuzzyDropdown } from "./FuzzyDropdown";
 
 interface FormFillerProps {
   fields: FormFieldInfo[];
@@ -6,6 +8,7 @@ interface FormFillerProps {
   zoom: number;
   annotationMode: string | null;
   onFieldChange: (pageIndex: number, fieldIndex: number, value: string | null, isChecked: boolean | null) => void;
+  fieldLibrary: FieldLibrary | null;
 }
 
 /** Height threshold in PDF points above which a text field renders as textarea. */
@@ -20,9 +23,11 @@ function sortedByPosition(fields: FormFieldInfo[]): FormFieldInfo[] {
   });
 }
 
-export function FormFiller({ fields, pageDimensions, zoom, annotationMode, onFieldChange }: FormFillerProps) {
+export function FormFiller({ fields, pageDimensions, zoom, annotationMode, onFieldChange, fieldLibrary }: FormFillerProps) {
   const sorted = sortedByPosition(fields);
   const disablePointerEvents = annotationMode !== null;
+  const [focusedFieldKey, setFocusedFieldKey] = useState<string | null>(null);
+  const inputRefs = useRef<Map<string, HTMLElement>>(new Map());
 
   const toCss = (rect: FormFieldInfo["rect"]) => ({
     left: rect.left * zoom,
@@ -30,6 +35,23 @@ export function FormFiller({ fields, pageDimensions, zoom, annotationMode, onFie
     width: (rect.right - rect.left) * zoom,
     height: (rect.top - rect.bottom) * zoom,
   });
+
+  const handleFuzzySelect = useCallback((field: FormFieldInfo, entry: FieldEntry) => {
+    onFieldChange(field.pageIndex, field.fieldIndex, entry.value, null);
+    setFocusedFieldKey(null);
+  }, [onFieldChange]);
+
+  const handleFuzzyDismiss = useCallback(() => {
+    setFocusedFieldKey(null);
+  }, []);
+
+  const setInputRef = useCallback((key: string, el: HTMLElement | null) => {
+    if (el) {
+      inputRefs.current.set(key, el);
+    } else {
+      inputRefs.current.delete(key);
+    }
+  }, []);
 
   return (
     <>
@@ -56,32 +78,61 @@ export function FormFiller({ fields, pageDimensions, zoom, annotationMode, onFie
         switch (field.fieldType) {
           case "text": {
             const isMultiline = pdfHeight > TEXTAREA_THRESHOLD;
+            const isFocused = focusedFieldKey === key;
+            const showDropdown = isFocused && (field.value?.length ?? 0) >= 2;
+
+            const inputProps = {
+              className: `form-field-overlay form-field-text${requiredClass}`,
+              style: baseStyle,
+              value: field.value ?? "",
+              readOnly: field.isReadOnly,
+              disabled: field.isReadOnly,
+              tabIndex,
+              onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+                onFieldChange(field.pageIndex, field.fieldIndex, e.target.value, null),
+              onFocus: () => setFocusedFieldKey(key),
+              onBlur: () => {
+                // Delay to allow FuzzyDropdown mousedown to fire first
+                setTimeout(() => setFocusedFieldKey(prev => prev === key ? null : prev), 150);
+              },
+            };
+
             if (isMultiline) {
               return (
-                <textarea
-                  key={key}
-                  className={`form-field-overlay form-field-text${requiredClass}`}
-                  style={baseStyle}
-                  value={field.value ?? ""}
-                  readOnly={field.isReadOnly}
-                  disabled={field.isReadOnly}
-                  tabIndex={tabIndex}
-                  onChange={(e) => onFieldChange(field.pageIndex, field.fieldIndex, e.target.value, null)}
-                />
+                <span key={key}>
+                  <textarea
+                    ref={(el) => setInputRef(key, el)}
+                    {...inputProps}
+                  />
+                  {showDropdown && (
+                    <FuzzyDropdown
+                      query={field.value ?? ""}
+                      library={fieldLibrary}
+                      anchorEl={inputRefs.current.get(key) ?? null}
+                      onSelect={(entry) => handleFuzzySelect(field, entry)}
+                      onDismiss={handleFuzzyDismiss}
+                    />
+                  )}
+                </span>
               );
             }
             return (
-              <input
-                key={key}
-                type="text"
-                className={`form-field-overlay form-field-text${requiredClass}`}
-                style={baseStyle}
-                value={field.value ?? ""}
-                readOnly={field.isReadOnly}
-                disabled={field.isReadOnly}
-                tabIndex={tabIndex}
-                onChange={(e) => onFieldChange(field.pageIndex, field.fieldIndex, e.target.value, null)}
-              />
+              <span key={key}>
+                <input
+                  ref={(el) => setInputRef(key, el)}
+                  type="text"
+                  {...inputProps}
+                />
+                {showDropdown && (
+                  <FuzzyDropdown
+                    query={field.value ?? ""}
+                    library={fieldLibrary}
+                    anchorEl={inputRefs.current.get(key) ?? null}
+                    onSelect={(entry) => handleFuzzySelect(field, entry)}
+                    onDismiss={handleFuzzyDismiss}
+                  />
+                )}
+              </span>
             );
           }
 

@@ -773,3 +773,220 @@ body {
     color: var(--text-primary);
   }
 }
+
+/* --- Fuzzy Dropdown --- */
+
+.fuzzy-dropdown {
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.fuzzy-dropdown-item {
+  display: flex;
+  flex-direction: column;
+  padding: 6px 10px;
+  cursor: pointer;
+  gap: 2px;
+}
+
+.fuzzy-dropdown-item:hover,
+.fuzzy-dropdown-item.selected {
+  background: var(--bg-secondary);
+}
+
+.fuzzy-dropdown-label {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.fuzzy-dropdown-preview {
+  font-size: 11px;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* --- Field Library Panel --- */
+
+.field-library-panel {
+  width: 280px;
+  min-width: 280px;
+  height: 100%;
+  overflow-y: auto;
+  background: var(--bg-secondary);
+  border-left: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+}
+
+.field-library-header {
+  padding: 12px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.field-library-header h3 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.field-library-search {
+  width: 100%;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 12px;
+  outline: none;
+}
+
+.field-library-search:focus {
+  border-color: var(--accent);
+}
+
+.field-library-categories {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 0;
+}
+
+.field-library-category {
+  margin-bottom: 4px;
+}
+
+.field-library-category-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 12px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.field-library-category-header:hover {
+  color: var(--text-primary);
+}
+
+.field-library-entry {
+  padding: 6px 12px 6px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border-bottom: 1px solid var(--border);
+}
+
+.field-library-entry:hover {
+  background: var(--bg-primary);
+}
+
+.field-library-entry-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.field-library-entry-value {
+  font-size: 11px;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.field-library-entry-tags {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-top: 2px;
+}
+
+.field-library-tag {
+  font-size: 10px;
+  padding: 1px 6px;
+  background: var(--accent);
+  color: white;
+  border-radius: 8px;
+}
+
+.field-library-entry-actions {
+  display: flex;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.field-library-entry-actions button {
+  font-size: 11px;
+  padding: 1px 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.field-library-entry-actions button:hover {
+  color: var(--text-primary);
+  border-color: var(--text-secondary);
+}
+
+.field-library-form {
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-primary);
+}
+
+.field-library-form input,
+.field-library-form select {
+  padding: 4px 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 12px;
+}
+
+.field-library-form input:focus,
+.field-library-form select:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+
+.field-library-footer {
+  padding: 8px 12px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 8px;
+}
+
+.field-library-footer button {
+  flex: 1;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.field-library-footer button:hover {
+  border-color: var(--accent);
+}

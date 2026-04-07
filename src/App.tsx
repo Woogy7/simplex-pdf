@@ -3,6 +3,7 @@ import Toolbar, { type AnnotationMode } from "./components/Toolbar";
 import Viewer from "./components/Viewer";
 import Sidebar from "./components/Sidebar";
 import SearchBar from "./components/SearchBar";
+import { FieldLibrary } from "./components/FieldLibrary";
 import {
   pickPdfFile,
   openFile,
@@ -12,11 +13,13 @@ import {
   getFormFields,
   setFormFieldValues,
   saveFlatTextFields,
+  getFieldLibrary,
   type DocumentInfo,
   type PageDimensions,
   type SearchResults,
   type FormFieldInfo,
   type FormFieldUpdate,
+  type FieldLibrary as FieldLibraryType,
 } from "./lib/api";
 import type { Annotation } from "./lib/annotations";
 import { createAnnotation, createInkAnnotation } from "./lib/annotations";
@@ -64,6 +67,8 @@ function App() {
   const [flatTextFields, setFlatTextFields] = useState<FlatTextFieldState[]>([]);
   const [fontSize, setFontSize] = useState(14);
   const [theme, setTheme] = useState<"light" | "dark" | "system">("system");
+  const [fieldLibrary, setFieldLibrary] = useState<FieldLibraryType | null>(null);
+  const [fieldLibraryOpen, setFieldLibraryOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -73,6 +78,19 @@ function App() {
       document.documentElement.setAttribute("data-theme", theme);
     }
   }, [theme]);
+
+  const loadLibrary = useCallback(async () => {
+    try {
+      const lib = await getFieldLibrary();
+      setFieldLibrary(lib);
+    } catch (err) {
+      console.warn("Could not load field library:", err);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadLibrary();
+  }, [loadLibrary]);
 
   const handleOpen = useCallback(async () => {
     try {
@@ -297,6 +315,8 @@ function App() {
         onSave={handleSave}
         theme={theme}
         onToggleTheme={toggleTheme}
+        fieldLibraryOpen={fieldLibraryOpen}
+        onToggleFieldLibrary={() => setFieldLibraryOpen(prev => !prev)}
       />
       {searchOpen && (
         <SearchBar
@@ -336,7 +356,11 @@ function App() {
               flatTextFields={flatTextFields}
               onFlatTextFieldsChange={setFlatTextFields}
               fontSize={fontSize}
+              fieldLibrary={fieldLibrary}
             />
+            {fieldLibraryOpen && (
+              <FieldLibrary library={fieldLibrary} onReload={loadLibrary} />
+            )}
           </>
         ) : (
           <div className="empty-state">

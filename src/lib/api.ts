@@ -183,3 +183,70 @@ export interface FlatTextField {
 export async function saveFlatTextFields(fields: FlatTextField[]): Promise<void> {
   return invoke("save_flat_text_fields", { fields });
 }
+
+// --- Field Library ---
+
+/** A single entry in the field library. */
+export interface FieldEntry {
+  id: string;
+  label: string;
+  value: string;
+  tags: string[];
+}
+
+/** A category containing field entries. */
+export interface Category {
+  id: string;
+  name: string;
+  fields: FieldEntry[];
+}
+
+/** The full field library structure. */
+export interface FieldLibrary {
+  version: number;
+  categories: Category[];
+}
+
+/** Returns the full field library. */
+export async function getFieldLibrary(): Promise<FieldLibrary> {
+  return invoke("get_field_library");
+}
+
+/** Adds a new entry to a category. */
+export async function addLibraryEntry(
+  categoryId: string, label: string, value: string, tags: string[],
+): Promise<FieldEntry> {
+  return invoke("add_library_entry", { categoryId, label, value, tags });
+}
+
+/** Updates an existing library entry. */
+export async function updateLibraryEntry(
+  entryId: string, label: string, value: string, tags: string[],
+): Promise<void> {
+  return invoke("update_library_entry", { entryId, label, value, tags });
+}
+
+/** Deletes a library entry by ID. */
+export async function deleteLibraryEntry(entryId: string): Promise<void> {
+  return invoke("delete_library_entry", { entryId });
+}
+
+/** Adds a new category to the library. */
+export async function addLibraryCategory(name: string): Promise<Category> {
+  return invoke("add_library_category", { name });
+}
+
+/** Deletes a category by ID. */
+export async function deleteLibraryCategory(categoryId: string): Promise<void> {
+  return invoke("delete_library_category", { categoryId });
+}
+
+/** Imports a field library from a JSON string. */
+export async function importLibrary(json: string): Promise<void> {
+  return invoke("import_library", { json });
+}
+
+/** Exports the field library as a JSON string. */
+export async function exportLibrary(): Promise<string> {
+  return invoke("export_library");
+}

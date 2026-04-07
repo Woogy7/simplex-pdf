@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { renderPage, type PageDimensions, type SearchResults, type FormFieldInfo } from "../lib/api";
+import { renderPage, type PageDimensions, type SearchResults, type FormFieldInfo, type FieldLibrary, type FieldEntry } from "../lib/api";
 import type { FlatTextFieldState } from "../App";
 import type { Annotation } from "../lib/annotations";
 import { createAnnotation, createInkAnnotation } from "../lib/annotations";
 import type { AnnotationMode } from "./Toolbar";
 import { FormFiller } from "./FormFiller";
+import { FuzzyDropdown } from "./FuzzyDropdown";
 
 interface ViewerProps {
   currentPage: number;
@@ -24,6 +25,7 @@ interface ViewerProps {
   flatTextFields: FlatTextFieldState[];
   onFlatTextFieldsChange: (fields: FlatTextFieldState[]) => void;
   fontSize: number;
+  fieldLibrary: FieldLibrary | null;
 }
 
 const PAGE_GAP = 16;
@@ -55,6 +57,7 @@ export default function Viewer({
   flatTextFields,
   onFlatTextFieldsChange,
   fontSize,
+  fieldLibrary,
 }: ViewerProps) {
   const [renderedPages, setRenderedPages] = useState<Map<number, string>>(
     new Map(),
@@ -62,9 +65,11 @@ export default function Viewer({
   const [visiblePages, setVisiblePages] = useState<Set<number>>(new Set([0]));
   const [drag, setDrag] = useState<DragState | null>(null);
   const [inkDrag, setInkDrag] = useState<{ pageIndex: number; points: { x: number; y: number }[] } | null>(null);
+  const [focusedFlatFieldId, setFocusedFlatFieldId] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const inkPointsRef = useRef<{ x: number; y: number }[]>([]);
   const pageRefs = useRef<Map<number, HTMLDivElement>>(new Map());
+  const flatInputRefs = useRef<Map<string, HTMLElement>>(new Map());
   const scrollingToRef = useRef(false);
   const renderingRef = useRef<Set<string>>(new Set());
 
@@ -497,6 +502,17 @@ export default function Viewer({
     });
   };
 
+  const handleFlatFieldFuzzySelect = useCallback((fieldId: string, entry: FieldEntry) => {
+    onFlatTextFieldsChange(
+      flatTextFields.map(f => f.id === fieldId ? { ...f, text: entry.value } : f),
+    );
+    setFocusedFlatFieldId(null);
+  }, [flatTextFields, onFlatTextFieldsChange]);
+
+  const handleFlatFieldFuzzyDismiss = useCallback(() => {
+    setFocusedFlatFieldId(null);
+  }, []);
+
   if (dimensions.length === 0) {
     return <div className="viewer"><div className="viewer-loading">Loading...</div></div>;
   }
@@ -540,6 +556,7 @@ export default function Viewer({
                   zoom={zoom}
                   annotationMode={annotationMode}
                   onFieldChange={onFormFieldChange}
+                  fieldLibrary={fieldLibrary}
                 />
               )}
               {flatTextFields
@@ -552,9 +569,15 @@ export default function Viewer({
                     width: (field.rect.right - field.rect.left) * zoom,
                     height: (field.rect.top - field.rect.bottom) * zoom,
                   };
+                  const isFocused = focusedFlatFieldId === field.id;
+                  const showDropdown = isFocused && field.text.length >= 2;
                   return (
                     <div key={field.id} className="flat-text-field" style={style}>
                       <input
+                        ref={(el) => {
+                          if (el) flatInputRefs.current.set(field.id, el);
+                          else flatInputRefs.current.delete(field.id);
+                        }}
                         type="text"
                         value={field.text}
                         onChange={(e) => {
@@ -564,10 +587,23 @@ export default function Viewer({
                             ),
                           );
                         }}
+                        onFocus={() => setFocusedFlatFieldId(field.id)}
+                        onBlur={() => {
+                          setTimeout(() => setFocusedFlatFieldId(prev => prev === field.id ? null : prev), 150);
+                        }}
                         autoFocus={field.isEditing}
                         style={{ fontSize: field.fontSize * zoom }}
                         className="flat-text-input"
                       />
+                      {showDropdown && (
+                        <FuzzyDropdown
+                          query={field.text}
+                          library={fieldLibrary}
+                          anchorEl={flatInputRefs.current.get(field.id) ?? null}
+                          onSelect={(entry) => handleFlatFieldFuzzySelect(field.id, entry)}
+                          onDismiss={handleFlatFieldFuzzyDismiss}
+                        />
+                      )}
                     </div>
                   );
                 })}
