@@ -14,9 +14,13 @@ use std::sync::Mutex;
 
 use commands::file::OpenDocument;
 use storage::field_library;
+use storage::signatures;
 
 /// Managed Tauri state wrapping the in-memory field library behind a mutex.
 pub struct FieldLibraryState(pub Mutex<field_library::FieldLibrary>);
+
+/// Managed Tauri state wrapping the in-memory signature index behind a mutex.
+pub struct SignatureState(pub Mutex<signatures::SignatureIndex>);
 
 /// Builds and runs the Tauri application.
 ///
@@ -32,6 +36,9 @@ pub fn run() {
         .manage(OpenDocument(Mutex::new(None)))
         .manage(FieldLibraryState(Mutex::new(
             field_library::load_library().unwrap_or_default(),
+        )))
+        .manage(SignatureState(Mutex::new(
+            signatures::load_index().unwrap_or_default(),
         )))
         .invoke_handler(tauri::generate_handler![
             commands::file::open_file,
@@ -55,6 +62,11 @@ pub fn run() {
             commands::forms::delete_library_category,
             commands::forms::import_library,
             commands::forms::export_library,
+            commands::sign::list_signatures,
+            commands::sign::get_signature_image,
+            commands::sign::save_signature,
+            commands::sign::delete_signature_cmd,
+            commands::sign::place_signature_on_page,
         ])
         .run(tauri::generate_context!())
         .expect("failed to run simplex-pdf application");
