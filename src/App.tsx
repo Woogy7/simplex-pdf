@@ -173,6 +173,7 @@ function App() {
         handleSave();
         return;
       }
+      if (ctrl && e.key === "o") { e.preventDefault(); handleOpen(); return; }
       if (e.key === "Escape") {
         setAnnotationMode(null);
         return;
@@ -184,7 +185,6 @@ function App() {
       if (ctrl && e.key === "=") { e.preventDefault(); handleZoomIn(); }
       else if (ctrl && e.key === "-") { e.preventDefault(); handleZoomOut(); }
       else if (ctrl && e.key === "0") { e.preventDefault(); handleZoomReset(); }
-      else if (ctrl && e.key === "o") { e.preventDefault(); handleOpen(); }
       else if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(e.key)) { return; }
       else if (e.key === "Home") { e.preventDefault(); handlePageChange(0); }
       else if (e.key === "End") { e.preventDefault(); handlePageChange(docInfo.pageCount - 1); }
