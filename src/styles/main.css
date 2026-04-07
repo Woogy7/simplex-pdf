@@ -573,3 +573,40 @@ body {
     border-color: #5c2020;
   }
 }
+
+/* --- Stroke Width Picker --- */
+
+.stroke-width-picker {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 4px;
+}
+
+.stroke-width-btn {
+  width: 28px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  padding: 0;
+}
+
+.stroke-width-btn:hover {
+  background: var(--bg-secondary);
+}
+
+.stroke-width-btn.selected {
+  border-color: var(--accent);
+  background: var(--bg-secondary);
+}
+
+.stroke-width-preview {
+  display: block;
+  background: var(--text-primary);
+  border-radius: 1px;
+}

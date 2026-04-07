@@ -6,7 +6,8 @@ export type AnnotationMode =
   | "highlight"
   | "underline"
   | "strikeout"
-  | "note";
+  | "note"
+  | "ink";
 
 const PRESET_COLORS = [
   { name: "Yellow", value: "#FFD500" },
@@ -18,6 +19,8 @@ const PRESET_COLORS = [
   { name: "White", value: "#FFFFFF" },
 ];
 
+const STROKE_WIDTHS = [1, 2, 4, 8];
+
 interface ToolbarProps {
   docInfo: DocumentInfo | null;
   currentPage: number;
@@ -25,6 +28,7 @@ interface ToolbarProps {
   sidebarOpen: boolean;
   annotationMode: AnnotationMode;
   annotationColor: string;
+  strokeWidth: number;
   onOpen: () => void;
   onPageChange: (page: number) => void;
   onZoomIn: () => void;
@@ -34,6 +38,7 @@ interface ToolbarProps {
   onSearch: () => void;
   onAnnotationMode: (mode: AnnotationMode) => void;
   onAnnotationColor: (color: string) => void;
+  onStrokeWidth: (w: number) => void;
   onSave: () => void;
   theme: "light" | "dark" | "system";
   onToggleTheme: () => void;
@@ -46,6 +51,7 @@ export default function Toolbar({
   sidebarOpen,
   annotationMode,
   annotationColor,
+  strokeWidth,
   onOpen,
   onPageChange,
   onZoomIn,
@@ -55,6 +61,7 @@ export default function Toolbar({
   onSearch,
   onAnnotationMode,
   onAnnotationColor,
+  onStrokeWidth,
   onSave,
   theme,
   onToggleTheme,
@@ -181,6 +188,7 @@ export default function Toolbar({
           {modeBtn("underline", "U", "Underline")}
           {modeBtn("strikeout", "S", "Strikeout")}
           {modeBtn("note", "N", "Sticky note")}
+          {modeBtn("ink", "D", "Draw")}
 
           {annotationMode && (
             <span className="color-picker">
@@ -192,6 +200,24 @@ export default function Toolbar({
                   onClick={() => onAnnotationColor(c.value)}
                   title={c.name}
                 />
+              ))}
+            </span>
+          )}
+
+          {annotationMode === "ink" && (
+            <span className="stroke-width-picker">
+              {STROKE_WIDTHS.map((w) => (
+                <button
+                  key={w}
+                  className={`stroke-width-btn ${strokeWidth === w ? "selected" : ""}`}
+                  onClick={() => onStrokeWidth(w)}
+                  title={`Stroke width: ${w}px`}
+                >
+                  <span
+                    className="stroke-width-preview"
+                    style={{ width: 16, height: Math.max(w, 1) }}
+                  />
+                </button>
               ))}
             </span>
           )}

@@ -85,6 +85,16 @@ export interface AnnotationColor {
   a: number;
 }
 
+export interface StrokePoint {
+  x: number;
+  y: number;
+}
+
+export interface InkStrokeData {
+  points: StrokePoint[];
+  strokeWidth: number;
+}
+
 /** Data sent to the backend when saving annotations. */
 export interface AnnotationData {
   pageIndex: number;
@@ -92,6 +102,7 @@ export interface AnnotationData {
   rect: { left: number; top: number; right: number; bottom: number };
   color: AnnotationColor;
   content?: string;
+  inkStroke?: InkStrokeData;
 }
 
 /** Existing annotation read from the PDF. */
@@ -101,6 +112,7 @@ export interface ExistingAnnotation {
   rect: { left: number; top: number; right: number; bottom: number };
   color: string;
   content: string | null;
+  inkStroke?: InkStrokeData;
 }
 
 /** Reads all existing annotations from the currently open document. */

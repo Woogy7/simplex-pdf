@@ -13,6 +13,7 @@ interface ViewerProps {
   currentMatchIndex: number;
   annotationMode: AnnotationMode;
   annotationColor: string;
+  strokeWidth: number;
   annotations: Annotation[];
   onAddAnnotation: (annotation: Annotation) => void;
   onPageChange: (page: number) => void;
@@ -38,6 +39,7 @@ export default function Viewer({
   currentMatchIndex,
   annotationMode,
   annotationColor,
+  strokeWidth: _strokeWidth,
   annotations,
   onAddAnnotation,
   onPageChange,

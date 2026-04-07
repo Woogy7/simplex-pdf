@@ -14,7 +14,7 @@ import {
   type SearchResults,
 } from "./lib/api";
 import type { Annotation } from "./lib/annotations";
-import { createAnnotation } from "./lib/annotations";
+import { createAnnotation, createInkAnnotation } from "./lib/annotations";
 import "./styles/main.css";
 
 const MIN_ZOOM = 0.25;
@@ -43,6 +43,7 @@ function App() {
   const [currentMatchIndex, setCurrentMatchIndex] = useState(0);
   const [annotationMode, setAnnotationMode] = useState<AnnotationMode>(null);
   const [annotationColor, setAnnotationColor] = useState("#FFD500");
+  const [strokeWidth, setStrokeWidth] = useState(2);
   const [annotations, setAnnotations] = useState<Annotation[]>([]);
   const [theme, setTheme] = useState<"light" | "dark" | "system">("system");
   const [error, setError] = useState<string | null>(null);
@@ -67,15 +68,23 @@ function App() {
       let loadedAnns: Annotation[] = [];
       try {
         const existing = await getAnnotations();
-        loadedAnns = existing.map((ea) =>
-          createAnnotation(
+        loadedAnns = existing.map((ea) => {
+          if (ea.annotationType === "ink" && ea.inkStroke) {
+            return createInkAnnotation(
+              ea.pageIndex,
+              ea.inkStroke.points,
+              ea.color,
+              ea.inkStroke.strokeWidth,
+            );
+          }
+          return createAnnotation(
             ea.pageIndex,
             ea.annotationType as Annotation["type"],
             ea.rect,
             ea.color,
             ea.content ?? undefined,
-          ),
-        );
+          );
+        });
       } catch (err) {
         console.warn("Could not load existing annotations:", err);
       }
@@ -99,8 +108,12 @@ function App() {
         pageIndex: a.pageIndex,
         annotationType: a.type,
         rect: a.rect,
-        color: hexToRgba(a.color, a.type === "note" ? 255 : 128),
+        color: hexToRgba(
+          a.color,
+          a.type === "note" || a.type === "ink" ? 255 : 128,
+        ),
         content: a.content,
+        inkStroke: a.inkStroke,
       }));
       await saveWithAnnotations(annData);
       // Keep annotations visible — they're now in the PDF AND shown as overlays.
@@ -205,6 +218,7 @@ function App() {
         sidebarOpen={sidebarOpen}
         annotationMode={annotationMode}
         annotationColor={annotationColor}
+        strokeWidth={strokeWidth}
         onOpen={handleOpen}
         onPageChange={handlePageChange}
         onZoomIn={handleZoomIn}
@@ -214,6 +228,7 @@ function App() {
         onSearch={() => setSearchOpen(true)}
         onAnnotationMode={setAnnotationMode}
         onAnnotationColor={setAnnotationColor}
+        onStrokeWidth={setStrokeWidth}
         onSave={handleSave}
         theme={theme}
         onToggleTheme={toggleTheme}
@@ -247,6 +262,7 @@ function App() {
               currentMatchIndex={currentMatchIndex}
               annotationMode={annotationMode}
               annotationColor={annotationColor}
+              strokeWidth={strokeWidth}
               annotations={annotations}
               onAddAnnotation={handleAddAnnotation}
               onPageChange={handlePageChange}
