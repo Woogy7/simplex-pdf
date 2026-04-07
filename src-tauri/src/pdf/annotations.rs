@@ -208,7 +208,8 @@ pub fn save_annotations_and_write(
                     $created.set_bounds($rect)?;
                     $created.set_stroke_color($color)?;
                     let _ = $created.set_fill_color($color);
-                    $created.attachment_points_mut()
+                    $created
+                        .attachment_points_mut()
                         .create_attachment_point_at_end($qp)?;
                     // Store color in /Contents so we can read it back
                     let _ = $created.set_contents($contents);

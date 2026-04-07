@@ -36,6 +36,9 @@ pub fn run() {
             commands::annotate::get_annotations,
             commands::annotate::save_with_annotations,
             commands::annotate::save_pdf,
+            commands::forms::get_form_fields,
+            commands::forms::has_form,
+            commands::forms::set_form_field_values,
         ])
         .run(tauri::generate_context!())
         .expect("failed to run simplex-pdf application");
