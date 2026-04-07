@@ -47,6 +47,7 @@ interface ToolbarProps {
   onToggleTheme: () => void;
   fieldLibraryOpen: boolean;
   onToggleFieldLibrary: () => void;
+  onOpenSignatureManager: () => void;
 }
 
 export default function Toolbar({
@@ -74,6 +75,7 @@ export default function Toolbar({
   onToggleTheme,
   fieldLibraryOpen,
   onToggleFieldLibrary,
+  onOpenSignatureManager,
 }: ToolbarProps) {
   const pageCount = docInfo?.pageCount ?? 0;
 
@@ -264,6 +266,13 @@ export default function Toolbar({
               title="Search (Ctrl+F)"
             >
               Search
+            </button>
+            <button
+              className="toolbar-btn"
+              onClick={onOpenSignatureManager}
+              title="Manage and place signatures"
+            >
+              Sign
             </button>
             <button
               className={`toolbar-btn ${fieldLibraryOpen ? "active" : ""}`}

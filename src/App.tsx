@@ -4,6 +4,7 @@ import Viewer from "./components/Viewer";
 import Sidebar from "./components/Sidebar";
 import SearchBar from "./components/SearchBar";
 import { FieldLibrary } from "./components/FieldLibrary";
+import { SignatureManager } from "./components/SignatureManager";
 import {
   pickPdfFile,
   openFile,
@@ -14,6 +15,7 @@ import {
   setFormFieldValues,
   saveFlatTextFields,
   getFieldLibrary,
+  placeSignatureOnPage,
   type DocumentInfo,
   type PageDimensions,
   type SearchResults,
@@ -69,6 +71,8 @@ function App() {
   const [theme, setTheme] = useState<"light" | "dark" | "system">("system");
   const [fieldLibrary, setFieldLibrary] = useState<FieldLibraryType | null>(null);
   const [fieldLibraryOpen, setFieldLibraryOpen] = useState(false);
+  const [signatureManagerOpen, setSignatureManagerOpen] = useState(false);
+  const [placingSignature, setPlacingSignature] = useState<{ id: string; imageUri: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -86,6 +90,12 @@ function App() {
     } catch (err) {
       console.warn("Could not load field library:", err);
     }
+  }, []);
+
+  // Placeholder for signature reload — SignatureManager handles its own list.
+  // Kept as a callback so the manager can signal reload if needed in the future.
+  const loadSignatures = useCallback(() => {
+    // no-op: signatures are managed inside SignatureManager
   }, []);
 
   useEffect(() => {
@@ -207,6 +217,23 @@ function App() {
     ));
   }, []);
 
+  const [renderVersion, setRenderVersion] = useState(0);
+
+  const handlePlaceSignature = useCallback(async (
+    signatureId: string, pageIndex: number,
+    x: number, y: number, width: number, height: number,
+  ) => {
+    try {
+      setError(null);
+      await placeSignatureOnPage(signatureId, pageIndex, x, y, width, height);
+      setPlacingSignature(null);
+      // Bump render version to force Viewer to re-render pages
+      setRenderVersion((v) => v + 1);
+    } catch (err) {
+      setError(String(err));
+    }
+  }, []);
+
   const handlePageChange = useCallback(
     (page: number) => {
       if (!docInfo) return;
@@ -269,6 +296,9 @@ function App() {
       }
       if (ctrl && e.key === "o") { e.preventDefault(); handleOpen(); return; }
       if (e.key === "Escape") {
+        if (placingSignature) {
+          setPlacingSignature(null);
+        }
         setAnnotationMode(null);
         return;
       }
@@ -288,7 +318,7 @@ function App() {
 
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [docInfo, currentPage, handleOpen, handleSave, handlePageChange, handleZoomIn, handleZoomOut, handleZoomReset]);
+  }, [docInfo, currentPage, placingSignature, handleOpen, handleSave, handlePageChange, handleZoomIn, handleZoomOut, handleZoomReset]);
 
   return (
     <div className="app-layout">
@@ -317,6 +347,7 @@ function App() {
         onToggleTheme={toggleTheme}
         fieldLibraryOpen={fieldLibraryOpen}
         onToggleFieldLibrary={() => setFieldLibraryOpen(prev => !prev)}
+        onOpenSignatureManager={() => setSignatureManagerOpen(true)}
       />
       {searchOpen && (
         <SearchBar
@@ -357,6 +388,9 @@ function App() {
               onFlatTextFieldsChange={setFlatTextFields}
               fontSize={fontSize}
               fieldLibrary={fieldLibrary}
+              placingSignature={placingSignature}
+              onPlaceSignature={handlePlaceSignature}
+              renderVersion={renderVersion}
             />
             {fieldLibraryOpen && (
               <FieldLibrary library={fieldLibrary} onReload={loadLibrary} />
@@ -372,6 +406,21 @@ function App() {
           </div>
         )}
       </div>
+      {placingSignature && (
+        <div className="signature-placement-banner">
+          Click on a page to place signature. Press Escape to cancel.
+        </div>
+      )}
+      {signatureManagerOpen && (
+        <SignatureManager
+          onClose={() => setSignatureManagerOpen(false)}
+          onSignatureSelect={async (id, uri) => {
+            setSignatureManagerOpen(false);
+            setPlacingSignature({ id, imageUri: uri });
+          }}
+          onReload={loadSignatures}
+        />
+      )}
     </div>
   );
 }

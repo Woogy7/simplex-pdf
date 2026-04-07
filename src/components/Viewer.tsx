@@ -26,6 +26,9 @@ interface ViewerProps {
   onFlatTextFieldsChange: (fields: FlatTextFieldState[]) => void;
   fontSize: number;
   fieldLibrary: FieldLibrary | null;
+  placingSignature: { id: string; imageUri: string } | null;
+  onPlaceSignature: (signatureId: string, pageIndex: number, x: number, y: number, width: number, height: number) => void;
+  renderVersion: number;
 }
 
 const PAGE_GAP = 16;
@@ -58,6 +61,9 @@ export default function Viewer({
   onFlatTextFieldsChange,
   fontSize,
   fieldLibrary,
+  placingSignature,
+  onPlaceSignature,
+  renderVersion,
 }: ViewerProps) {
   const [renderedPages, setRenderedPages] = useState<Map<number, string>>(
     new Map(),
@@ -81,7 +87,7 @@ export default function Viewer({
 
   useEffect(() => {
     renderingRef.current.clear();
-  }, [zoom]);
+  }, [zoom, renderVersion]);
 
   // Intersection observer
   useEffect(() => {
@@ -191,7 +197,7 @@ export default function Viewer({
         })
         .catch(console.error);
     }
-  }, [visiblePages, dimensions, zoom, pageCount]);
+  }, [visiblePages, dimensions, zoom, pageCount, renderVersion]);
 
   const setPageRef = useCallback(
     (index: number) => (el: HTMLDivElement | null) => {
@@ -219,6 +225,15 @@ export default function Viewer({
   };
 
   const handleMouseDown = (e: React.MouseEvent, pageIndex: number, pageEl: HTMLDivElement) => {
+    // Signature placement mode takes priority
+    if (placingSignature) {
+      const pos = mouseToPdf(e, pageIndex, pageEl);
+      const sigWidth = 150;
+      const sigHeight = 60;
+      onPlaceSignature(placingSignature.id, pageIndex, pos.x, pos.y, sigWidth, sigHeight);
+      return;
+    }
+
     if (!annotationMode) return;
 
     if (annotationMode === "text") {
@@ -518,7 +533,7 @@ export default function Viewer({
   }
 
   return (
-    <div className={`viewer ${annotationMode ? "annotating" : ""}`} ref={containerRef}>
+    <div className={`viewer ${annotationMode ? "annotating" : ""} ${placingSignature ? "placing-signature" : ""}`} ref={containerRef}>
       <div className="viewer-pages">
         {dimensions.map((dim, index) => {
           const imageUri = getImageUri(index);

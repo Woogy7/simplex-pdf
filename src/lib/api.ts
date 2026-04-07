@@ -250,3 +250,44 @@ export async function importLibrary(json: string): Promise<void> {
 export async function exportLibrary(): Promise<string> {
   return invoke("export_library");
 }
+
+// --- Signatures ---
+
+/** A saved signature entry. */
+export interface SignatureEntry {
+  id: string;
+  name: string;
+  filename: string;
+  createdAt: string;
+  sigType: "drawn" | "uploaded" | "typed";
+}
+
+/** Returns all saved signatures. */
+export async function listSignatures(): Promise<SignatureEntry[]> {
+  return invoke("list_signatures");
+}
+
+/** Returns the base64 data URI for a signature image. */
+export async function getSignatureImage(id: string): Promise<string> {
+  return invoke("get_signature_image", { id });
+}
+
+/** Saves a new signature and returns the created entry. */
+export async function saveSignature(
+  name: string, pngBase64: string, sigType: string,
+): Promise<SignatureEntry> {
+  return invoke("save_signature", { name, pngBase64, sigType });
+}
+
+/** Deletes a saved signature by ID. */
+export async function deleteSignature(id: string): Promise<void> {
+  return invoke("delete_signature_cmd", { id });
+}
+
+/** Places a signature image on a PDF page at the given position and size. */
+export async function placeSignatureOnPage(
+  signatureId: string, pageIndex: number,
+  x: number, y: number, width: number, height: number,
+): Promise<void> {
+  return invoke("place_signature_on_page", { signatureId, pageIndex, x, y, width, height });
+}
