@@ -7,7 +7,8 @@ export type AnnotationMode =
   | "underline"
   | "strikeout"
   | "note"
-  | "ink";
+  | "ink"
+  | "text";
 
 const PRESET_COLORS = [
   { name: "Yellow", value: "#FFD500" },
@@ -29,6 +30,7 @@ interface ToolbarProps {
   annotationMode: AnnotationMode;
   annotationColor: string;
   strokeWidth: number;
+  fontSize: number;
   onOpen: () => void;
   onPageChange: (page: number) => void;
   onZoomIn: () => void;
@@ -39,6 +41,7 @@ interface ToolbarProps {
   onAnnotationMode: (mode: AnnotationMode) => void;
   onAnnotationColor: (color: string) => void;
   onStrokeWidth: (w: number) => void;
+  onFontSize: (size: number) => void;
   onSave: () => void;
   theme: "light" | "dark" | "system";
   onToggleTheme: () => void;
@@ -52,6 +55,7 @@ export default function Toolbar({
   annotationMode,
   annotationColor,
   strokeWidth,
+  fontSize,
   onOpen,
   onPageChange,
   onZoomIn,
@@ -62,6 +66,7 @@ export default function Toolbar({
   onAnnotationMode,
   onAnnotationColor,
   onStrokeWidth,
+  onFontSize,
   onSave,
   theme,
   onToggleTheme,
@@ -189,6 +194,7 @@ export default function Toolbar({
           {modeBtn("strikeout", "S", "Strikeout")}
           {modeBtn("note", "N", "Sticky note")}
           {modeBtn("ink", "D", "Draw")}
+          {modeBtn("text", "T", "Text placement")}
 
           {annotationMode && (
             <span className="color-picker">
@@ -219,6 +225,27 @@ export default function Toolbar({
                   />
                 </button>
               ))}
+            </span>
+          )}
+
+          {annotationMode === "text" && (
+            <span className="font-size-picker">
+              <label className="font-size-label" title="Font size (pt)">
+                <input
+                  type="number"
+                  className="font-size-input"
+                  value={fontSize}
+                  min={8}
+                  max={72}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value, 10);
+                    if (!isNaN(val) && val >= 8 && val <= 72) {
+                      onFontSize(val);
+                    }
+                  }}
+                />
+                pt
+              </label>
             </span>
           )}
         </div>

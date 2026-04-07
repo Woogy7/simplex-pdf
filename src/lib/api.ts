@@ -168,3 +168,18 @@ export async function hasForm(): Promise<boolean> {
 export async function setFormFieldValues(updates: FormFieldUpdate[]): Promise<void> {
   return invoke("set_form_field_values", { updates });
 }
+
+// --- Flat Text Fields ---
+
+/** A flat-text field placement for non-interactive PDFs. */
+export interface FlatTextField {
+  pageIndex: number;
+  text: string;
+  rect: { left: number; top: number; right: number; bottom: number };
+  fontSize: number;
+}
+
+/** Saves flat text fields as FreeText annotations on the PDF. */
+export async function saveFlatTextFields(fields: FlatTextField[]): Promise<void> {
+  return invoke("save_flat_text_fields", { fields });
+}

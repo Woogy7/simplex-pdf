@@ -76,6 +76,54 @@ pub struct FlatTextField {
     pub font_size: f32,
 }
 
+/// Saves flat text fields as `FreeText` annotations on the PDF.
+///
+/// Each text field is written as a `FreeText` annotation at the specified
+/// position. This is used for non-interactive PDFs where users place text
+/// overlays directly on the page.
+///
+/// # Errors
+///
+/// Returns [`AppError`] if page access or file save fails.
+pub fn save_flat_text_fields(
+    document: &Document,
+    fields: &[FlatTextField],
+) -> Result<(), AppError> {
+    let pdf = document.inner();
+    let path = &document.info().file_path;
+
+    // Group by page to minimize page open/close cycles.
+    let mut by_page: std::collections::BTreeMap<i32, Vec<&FlatTextField>> =
+        std::collections::BTreeMap::new();
+    for field in fields {
+        by_page.entry(field.page_index).or_default().push(field);
+    }
+
+    // Keep all pages alive until after save completes.
+    let mut open_pages = Vec::new();
+
+    for (page_index, page_fields) in &by_page {
+        let mut page = pdf.pages().get(*page_index)?;
+
+        {
+            let annotations = page.annotations_mut();
+            for field in page_fields {
+                let mut ann = annotations.create_free_text_annotation(&field.text)?;
+                let rect = super::annotations::to_pdf_rect(&field.rect);
+                ann.set_bounds(rect)?;
+            }
+        }
+
+        open_pages.push(page);
+    }
+
+    let bytes = pdf.save_to_bytes()?;
+    drop(open_pages);
+    std::fs::write(path, bytes)?;
+
+    Ok(())
+}
+
 /// Returns whether the document contains any interactive form fields.
 ///
 /// Checks for an embedded `AcroForm` or XFA form. A document without forms

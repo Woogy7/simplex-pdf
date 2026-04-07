@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { renderPage, type PageDimensions, type SearchResults, type FormFieldInfo } from "../lib/api";
+import type { FlatTextFieldState } from "../App";
 import type { Annotation } from "../lib/annotations";
 import { createAnnotation, createInkAnnotation } from "../lib/annotations";
 import type { AnnotationMode } from "./Toolbar";
@@ -20,6 +21,9 @@ interface ViewerProps {
   onPageChange: (page: number) => void;
   formFields: FormFieldInfo[];
   onFormFieldChange: (pageIndex: number, fieldIndex: number, value: string | null, isChecked: boolean | null) => void;
+  flatTextFields: FlatTextFieldState[];
+  onFlatTextFieldsChange: (fields: FlatTextFieldState[]) => void;
+  fontSize: number;
 }
 
 const PAGE_GAP = 16;
@@ -48,6 +52,9 @@ export default function Viewer({
   onPageChange,
   formFields,
   onFormFieldChange,
+  flatTextFields,
+  onFlatTextFieldsChange,
+  fontSize,
 }: ViewerProps) {
   const [renderedPages, setRenderedPages] = useState<Map<number, string>>(
     new Map(),
@@ -208,6 +215,30 @@ export default function Viewer({
 
   const handleMouseDown = (e: React.MouseEvent, pageIndex: number, pageEl: HTMLDivElement) => {
     if (!annotationMode) return;
+
+    if (annotationMode === "text") {
+      // Don't place text when clicking on an existing flat text field or form overlay
+      const target = e.target as HTMLElement;
+      if (target.closest(".flat-text-field") || target.closest(".form-field-overlay")) return;
+
+      const pos = mouseToPdf(e, pageIndex, pageEl);
+      const newField: FlatTextFieldState = {
+        id: `flat-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        pageIndex,
+        text: "",
+        rect: {
+          left: pos.x,
+          top: pos.y + fontSize * 1.2,
+          right: pos.x + 200,
+          bottom: pos.y,
+        },
+        fontSize,
+        isEditing: true,
+      };
+      onFlatTextFieldsChange([...flatTextFields, newField]);
+      return;
+    }
+
     const pos = mouseToPdf(e, pageIndex, pageEl);
 
     if (annotationMode === "ink") {
@@ -247,7 +278,7 @@ export default function Viewer({
       return;
     }
 
-    if (!drag || !annotationMode) {
+    if (!drag || !annotationMode || annotationMode === "text") {
       setDrag(null);
       return;
     }
@@ -511,6 +542,35 @@ export default function Viewer({
                   onFieldChange={onFormFieldChange}
                 />
               )}
+              {flatTextFields
+                .filter((f) => f.pageIndex === index)
+                .map((field) => {
+                  const style = {
+                    position: "absolute" as const,
+                    left: field.rect.left * zoom,
+                    top: (dim.height - field.rect.top) * zoom,
+                    width: (field.rect.right - field.rect.left) * zoom,
+                    height: (field.rect.top - field.rect.bottom) * zoom,
+                  };
+                  return (
+                    <div key={field.id} className="flat-text-field" style={style}>
+                      <input
+                        type="text"
+                        value={field.text}
+                        onChange={(e) => {
+                          onFlatTextFieldsChange(
+                            flatTextFields.map((f) =>
+                              f.id === field.id ? { ...f, text: e.target.value } : f,
+                            ),
+                          );
+                        }}
+                        autoFocus={field.isEditing}
+                        style={{ fontSize: field.fontSize * zoom }}
+                        className="flat-text-input"
+                      />
+                    </div>
+                  );
+                })}
             </div>
           );
         })}

@@ -39,6 +39,7 @@ pub fn run() {
             commands::forms::get_form_fields,
             commands::forms::has_form,
             commands::forms::set_form_field_values,
+            commands::forms::save_flat_text_fields,
         ])
         .run(tauri::generate_context!())
         .expect("failed to run simplex-pdf application");

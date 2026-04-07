@@ -5,7 +5,7 @@
 use tauri::State;
 
 use crate::commands::file::OpenDocument;
-use crate::pdf::forms::{self, FormFieldInfo, FormFieldUpdate};
+use crate::pdf::forms::{self, FlatTextField, FormFieldInfo, FormFieldUpdate};
 use crate::utils::error::AppError;
 
 /// Returns all interactive form fields across every page in the open document.
@@ -48,4 +48,20 @@ pub fn set_form_field_values(
         .map_err(|e| AppError::Other(format!("Lock poisoned: {e}")))?;
     let doc = guard.as_ref().ok_or(AppError::NoDocument)?;
     forms::set_form_field_values(doc, &updates)
+}
+
+/// Saves flat text fields as `FreeText` annotations on non-interactive PDFs.
+///
+/// Each field is placed at the specified page position as a `FreeText` annotation.
+#[tauri::command]
+pub fn save_flat_text_fields(
+    fields: Vec<FlatTextField>,
+    state: State<'_, OpenDocument>,
+) -> Result<(), AppError> {
+    let guard = state
+        .0
+        .lock()
+        .map_err(|e| AppError::Other(format!("Lock poisoned: {e}")))?;
+    let doc = guard.as_ref().ok_or(AppError::NoDocument)?;
+    forms::save_flat_text_fields(doc, &fields)
 }

@@ -93,7 +93,7 @@ pub struct AnnotationData {
 }
 
 /// Converts an [`AnnotationRect`] to a [`PdfRect`].
-fn to_pdf_rect(rect: &AnnotationRect) -> PdfRect {
+pub(crate) fn to_pdf_rect(rect: &AnnotationRect) -> PdfRect {
     PdfRect::new_from_values(rect.bottom, rect.left, rect.top, rect.right)
 }
 

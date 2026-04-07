@@ -11,6 +11,7 @@ import {
   saveWithAnnotations,
   getFormFields,
   setFormFieldValues,
+  saveFlatTextFields,
   type DocumentInfo,
   type PageDimensions,
   type SearchResults,
@@ -20,6 +21,15 @@ import {
 import type { Annotation } from "./lib/annotations";
 import { createAnnotation, createInkAnnotation } from "./lib/annotations";
 import "./styles/main.css";
+
+export interface FlatTextFieldState {
+  id: string;
+  pageIndex: number;
+  text: string;
+  rect: { left: number; top: number; right: number; bottom: number };
+  fontSize: number;
+  isEditing: boolean;
+}
 
 const MIN_ZOOM = 0.25;
 const MAX_ZOOM = 4.0;
@@ -51,6 +61,8 @@ function App() {
   const [annotations, setAnnotations] = useState<Annotation[]>([]);
   const [formFields, setFormFields] = useState<FormFieldInfo[]>([]);
   const [formUpdates, setFormUpdates] = useState<Map<string, FormFieldUpdate>>(new Map());
+  const [flatTextFields, setFlatTextFields] = useState<FlatTextFieldState[]>([]);
+  const [fontSize, setFontSize] = useState(14);
   const [theme, setTheme] = useState<"light" | "dark" | "system">("system");
   const [error, setError] = useState<string | null>(null);
 
@@ -110,6 +122,7 @@ function App() {
       setAnnotations(loadedAnns);
       setFormFields(loadedFields);
       setFormUpdates(new Map());
+      setFlatTextFields([]);
     } catch (err) {
       setError(String(err));
     }
@@ -137,10 +150,25 @@ function App() {
         await setFormFieldValues(Array.from(formUpdates.values()));
         setFormUpdates(new Map());
       }
+      // Save flat text fields if any
+      if (flatTextFields.length > 0) {
+        const nonEmpty = flatTextFields.filter((f) => f.text.trim());
+        if (nonEmpty.length > 0) {
+          await saveFlatTextFields(
+            nonEmpty.map((f) => ({
+              pageIndex: f.pageIndex,
+              text: f.text,
+              rect: f.rect,
+              fontSize: f.fontSize,
+            })),
+          );
+        }
+        setFlatTextFields([]); // Clear after save since they're now embedded in PDF
+      }
     } catch (err) {
       setError(String(err));
     }
-  }, [annotations, formUpdates]);
+  }, [annotations, formUpdates, flatTextFields]);
 
   const handleAddAnnotation = useCallback((annotation: Annotation) => {
     setAnnotations((prev) => [...prev, annotation]);
@@ -254,6 +282,7 @@ function App() {
         annotationMode={annotationMode}
         annotationColor={annotationColor}
         strokeWidth={strokeWidth}
+        fontSize={fontSize}
         onOpen={handleOpen}
         onPageChange={handlePageChange}
         onZoomIn={handleZoomIn}
@@ -264,6 +293,7 @@ function App() {
         onAnnotationMode={setAnnotationMode}
         onAnnotationColor={setAnnotationColor}
         onStrokeWidth={setStrokeWidth}
+        onFontSize={setFontSize}
         onSave={handleSave}
         theme={theme}
         onToggleTheme={toggleTheme}
@@ -303,6 +333,9 @@ function App() {
               onPageChange={handlePageChange}
               formFields={formFields}
               onFormFieldChange={handleFormFieldChange}
+              flatTextFields={flatTextFields}
+              onFlatTextFieldsChange={setFlatTextFields}
+              fontSize={fontSize}
             />
           </>
         ) : (
