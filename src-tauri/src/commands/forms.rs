@@ -6,7 +6,9 @@ use tauri::State;
 
 use crate::commands::file::OpenDocument;
 use crate::pdf::forms::{self, FlatTextField, FormFieldInfo, FormFieldUpdate};
+use crate::storage::field_library;
 use crate::utils::error::AppError;
+use crate::FieldLibraryState;
 
 /// Returns all interactive form fields across every page in the open document.
 ///
@@ -64,4 +66,125 @@ pub fn save_flat_text_fields(
         .map_err(|e| AppError::Other(format!("Lock poisoned: {e}")))?;
     let doc = guard.as_ref().ok_or(AppError::NoDocument)?;
     forms::save_flat_text_fields(doc, &fields)
+}
+
+// ---------------------------------------------------------------------------
+// Field library commands
+// ---------------------------------------------------------------------------
+
+/// Returns the entire field library.
+#[tauri::command]
+pub fn get_field_library(
+    state: State<'_, FieldLibraryState>,
+) -> Result<field_library::FieldLibrary, AppError> {
+    let guard = state
+        .0
+        .lock()
+        .map_err(|e| AppError::Other(format!("Lock poisoned: {e}")))?;
+    Ok(guard.clone())
+}
+
+/// Adds a new entry to a category and persists to disk.
+#[tauri::command]
+pub fn add_library_entry(
+    category_id: String,
+    label: String,
+    value: String,
+    tags: Vec<String>,
+    state: State<'_, FieldLibraryState>,
+) -> Result<field_library::FieldEntry, AppError> {
+    let mut guard = state
+        .0
+        .lock()
+        .map_err(|e| AppError::Other(format!("Lock poisoned: {e}")))?;
+    let entry = field_library::add_entry(&mut guard, &category_id, label, value, tags)?;
+    field_library::save_library(&guard)?;
+    Ok(entry)
+}
+
+/// Updates an existing entry and persists to disk.
+#[tauri::command]
+pub fn update_library_entry(
+    entry_id: String,
+    label: String,
+    value: String,
+    tags: Vec<String>,
+    state: State<'_, FieldLibraryState>,
+) -> Result<(), AppError> {
+    let mut guard = state
+        .0
+        .lock()
+        .map_err(|e| AppError::Other(format!("Lock poisoned: {e}")))?;
+    field_library::update_entry(&mut guard, &entry_id, label, value, tags)?;
+    field_library::save_library(&guard)?;
+    Ok(())
+}
+
+/// Deletes an entry by ID and persists to disk.
+#[tauri::command]
+pub fn delete_library_entry(
+    entry_id: String,
+    state: State<'_, FieldLibraryState>,
+) -> Result<(), AppError> {
+    let mut guard = state
+        .0
+        .lock()
+        .map_err(|e| AppError::Other(format!("Lock poisoned: {e}")))?;
+    field_library::delete_entry(&mut guard, &entry_id)?;
+    field_library::save_library(&guard)?;
+    Ok(())
+}
+
+/// Adds a new category and persists to disk.
+#[tauri::command]
+pub fn add_library_category(
+    name: String,
+    state: State<'_, FieldLibraryState>,
+) -> Result<field_library::Category, AppError> {
+    let mut guard = state
+        .0
+        .lock()
+        .map_err(|e| AppError::Other(format!("Lock poisoned: {e}")))?;
+    let category = field_library::add_category(&mut guard, name);
+    field_library::save_library(&guard)?;
+    Ok(category)
+}
+
+/// Deletes a category by ID and persists to disk.
+#[tauri::command]
+pub fn delete_library_category(
+    category_id: String,
+    state: State<'_, FieldLibraryState>,
+) -> Result<(), AppError> {
+    let mut guard = state
+        .0
+        .lock()
+        .map_err(|e| AppError::Other(format!("Lock poisoned: {e}")))?;
+    field_library::delete_category(&mut guard, &category_id)?;
+    field_library::save_library(&guard)?;
+    Ok(())
+}
+
+/// Replaces the entire field library with imported JSON and persists to disk.
+#[tauri::command]
+pub fn import_library(json: String, state: State<'_, FieldLibraryState>) -> Result<(), AppError> {
+    let imported: field_library::FieldLibrary = serde_json::from_str(&json)?;
+    let mut guard = state
+        .0
+        .lock()
+        .map_err(|e| AppError::Other(format!("Lock poisoned: {e}")))?;
+    *guard = imported;
+    field_library::save_library(&guard)?;
+    Ok(())
+}
+
+/// Exports the entire field library as a pretty-printed JSON string.
+#[tauri::command]
+pub fn export_library(state: State<'_, FieldLibraryState>) -> Result<String, AppError> {
+    let guard = state
+        .0
+        .lock()
+        .map_err(|e| AppError::Other(format!("Lock poisoned: {e}")))?;
+    let json = serde_json::to_string_pretty(&*guard)?;
+    Ok(json)
 }

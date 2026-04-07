@@ -13,6 +13,10 @@ pub mod utils;
 use std::sync::Mutex;
 
 use commands::file::OpenDocument;
+use storage::field_library;
+
+/// Managed Tauri state wrapping the in-memory field library behind a mutex.
+pub struct FieldLibraryState(pub Mutex<field_library::FieldLibrary>);
 
 /// Builds and runs the Tauri application.
 ///
@@ -26,6 +30,9 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .manage(OpenDocument(Mutex::new(None)))
+        .manage(FieldLibraryState(Mutex::new(
+            field_library::load_library().unwrap_or_default(),
+        )))
         .invoke_handler(tauri::generate_handler![
             commands::file::open_file,
             commands::file::get_page_count,
@@ -40,6 +47,14 @@ pub fn run() {
             commands::forms::has_form,
             commands::forms::set_form_field_values,
             commands::forms::save_flat_text_fields,
+            commands::forms::get_field_library,
+            commands::forms::add_library_entry,
+            commands::forms::update_library_entry,
+            commands::forms::delete_library_entry,
+            commands::forms::add_library_category,
+            commands::forms::delete_library_category,
+            commands::forms::import_library,
+            commands::forms::export_library,
         ])
         .run(tauri::generate_context!())
         .expect("failed to run simplex-pdf application");
